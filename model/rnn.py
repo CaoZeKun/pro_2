@@ -8,22 +8,21 @@ import matplotlib.pyplot as plt
 
 
 # data
-def load_data(data,k_fea,k_train=0.9,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,SHUFFLE_BOOL_TRA=False,
-              SHUFFLE_BOOL_VAL=False,NUM_WORKERS_TRA=0,NUM_WORKERS_VAL=0,isClassfier=True,LOSSNAME='crossentropy'):
+def load_data(data,k_fea=1,k_train=0.9,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,SHUFFLE_BOOL_TRA=False,
+              SHUFFLE_BOOL_VAL=False,NUM_WORKERS_TRA=0,NUM_WORKERS_VAL=0,isClassfier=True):
     """
 
     :param data: 数据
-    :param k_fea: 特征的列数
-    :param k_train: 训练集所占比例
-    :param BATCH_SIZE_TRA: 训练集批处理量
-    :param BATCH_SIZE_VAL: 验证集批处理量
-    :param SHUFFLE_BOOL_TRA: 训练集是否打乱
-    :param SHUFFLE_BOOL_VAL: 测试集是否打乱
-    :param NUM_WORKERS_TRA:  训练集中用于数据加载的子进程数
-    :param NUM_WORKERS_VAL: 测试集中用于数据加载的子进程数
-    :param isClassfier: 是否是分类
-    :param LOSSNAME:
-    :return:
+    :param k_fea: 特征的列数，默认：1
+    :param k_train: 训练集所占比例，默认：0.9
+    :param BATCH_SIZE_TRA: 训练集批处理量，默认：1
+    :param BATCH_SIZE_VAL: 验证集批处理量，默认：1
+    :param SHUFFLE_BOOL_TRA: 训练集是否打乱，默认：False （不打乱）
+    :param SHUFFLE_BOOL_VAL: 测试集是否打乱，默认：False （不打乱）
+    :param NUM_WORKERS_TRA:  训练集中用于数据加载的子进程数，默认：0
+    :param NUM_WORKERS_VAL: 测试集中用于数据加载的子进程数，默认：0
+    :param isClassfier: 是否是分类，默认：True
+    :return: 返回训练数据装载器 train_loader, 测试数据装载器val_loader
     """
     # k_fea(特征所在最后一列的索引)
     data_length = len(data)
@@ -73,6 +72,18 @@ def load_data(data,k_fea,k_train=0.9,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,SHUFFLE_B
 class RNN(nn.Module):
     def __init__(self,INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,NUM_LAYERS=1,NONLINEARITY='tanh',
                  BIAS_RNN_BOOL=True,BATCH_FIRST=True,DROPOUT_PRO=0,BIDIRECTIONAL_BOOL=False):
+        """
+
+        :param INPUT_SIZE: 数据输入的特征个数，无默认值
+        :param HIDDEN_SIZE: 隐藏层神经元的个数，无默认值
+        :param OUTPUT_SIZE: 输出神经元的个数，无默认值
+        :param NUM_LAYERS: 隐藏层的深度，默认：1
+        :param NONLINEARITY: 激活函数，默认：'tanh'
+        :param BIAS_RNN_BOOL: 是否有偏置，默认：True
+        :param BATCH_FIRST: 调整数据维度，若False (seq_len, batch, input_size), 默认True (batch, seq, input_size)
+        :param DROPOUT_PRO: 采用多大概率丢弃，默认：0
+        :param BIDIRECTIONAL_BOOL: 是否是双向，默认：False (单向)
+        """
         super(RNN,self).__init__()
         self.rnn = nn.RNN(
             input_size = INPUT_SIZE,
@@ -88,6 +99,11 @@ class RNN(nn.Module):
 
     # def forward(self,x,h_state):
     def forward(self, x):
+        """
+
+        :param x: 输入数据维度，
+        :return:
+        """
         # x (batch, seq , feature)
         # h_state (num_layers * num_directions, batch, hidden_size)
         # r_out (batch, seq , num_directions * hidden_size)
@@ -100,19 +116,30 @@ class RNN(nn.Module):
 
 # LSTM
 class LSTM(nn.Module):
-    def __init__(self,INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,NUM_LAYERS=1,NONLINEARITY='tanh',
-                 BIAS_RNN_BOOL=True,BATCH_FIRST=True,DROPOUT_PRO=0,BIDIRECTIONAL_BOOL=False):
+    def __init__(self,INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,NUM_LAYERS=1,BIAS_LSTM_BOOL=True,
+                 BATCH_FIRST=True,DROPOUT_PRO=0,BIDIRECTIONAL_BOOL=False):
+        """
+
+        :param INPUT_SIZE: 数据输入的特征个数，无默认值
+        :param HIDDEN_SIZE: 隐藏层神经元的个数，无默认值
+        :param OUTPUT_SIZE: 输出神经元的个数，无默认值
+        :param NUM_LAYERS: 隐藏层的深度，默认：1
+        :param BIAS_LSTM_BOOL: 是否有偏置，默认：True
+        :param BATCH_FIRST: 调整数据维度，若False (seq_len, batch, input_size), 默认True (batch, seq, input_size)
+        :param DROPOUT_PRO: 采用多大概率丢弃，默认：0
+        :param BIDIRECTIONAL_BOOL: 是否是双向，默认：False (单向)
+        """
         super(LSTM,self).__init__()
         self.lstm = nn.LSTM(
             input_size = INPUT_SIZE,
             hidden_size = HIDDEN_SIZE,
             num_layers = NUM_LAYERS,
-            bias = BIAS_RNN_BOOL,
+            bias = BIAS_LSTM_BOOL,
             batch_first = BATCH_FIRST,  # data_format (batch, seq, feature)
             dropout = DROPOUT_PRO,
             bidirectional = BIDIRECTIONAL_BOOL,
         )
-        self.out = nn.Linear(HIDDEN_SIZE,OUTPUT_SIZE,bias=BIAS_RNN_BOOL)
+        self.out = nn.Linear(HIDDEN_SIZE,OUTPUT_SIZE,bias=BIAS_LSTM_BOOL)
 
     # def forward(self,x,h_state):
     def forward(self, x):
@@ -128,19 +155,19 @@ class LSTM(nn.Module):
 
 
 def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',WEIGHT_DECAY=0,
-                        LOSS_NAME = 'crossentropy',MODEL = 'RNN', isClassfier=False):
+                        LOSS_NAME = 'crossentropy',MODEL = 'RNN', isClassfier=True):
     """
 
-    :param INPUT_SIZE:
-    :param HIDDEN_SIZE:
-    :param OUTPUT_SIZE:
-    :param LR:
-    :param OPT:
-    :param WEIGHT_DECAY:
-    :param LOSS_NAME:
-    :param MODEL:
-    :param isClassfier:
-    :return:
+    :param INPUT_SIZE: 数据输入的特征个数，无默认值
+    :param HIDDEN_SIZE: 隐藏层神经元的个数，无默认值
+    :param OUTPUT_SIZE: 输出神经元的个数，无默认值
+    :param LR: 学习率，默认：1e-3
+    :param OPT: 优化算法，默认：'Adam'
+    :param WEIGHT_DECAY: 权重衰减，默认：0
+    :param LOSS_NAME: 损失函数名称，默认：'crossentropy'
+    :param MODEL: 模型，默认：'RNN'
+    :param isClassfier:是否分类，默认：True
+    :return: 返回 模型 model, 优化器 optimizer, 损失函数 criterion
     """
 
     if MODEL == 'RNN':
@@ -182,19 +209,19 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
 
 # train
 def train_model(model,train_loader,val_loader,criterion,optimizer,
-                PATH,num_epochs=25,CUDA_ID="0",isClassfier=True):
+                PATH,num_epochs=1,CUDA_ID="0",isClassfier=True):
     """
 
-    :param model:
-    :param train_loader:
-    :param val_loader:
-    :param criterion:
-    :param optimizer:
-    :param PATH:
-    :param num_epochs:
-    :param CUDA_ID:
-    :param isClassfier:
-    :return:
+    :param model: 模型，需传入，无默认值
+    :param train_loader: 练数据装载器，无默认值
+    :param val_loader: 测试数据装载器，无默认值
+    :param criterion: 损失函数，无默认值
+    :param optimizer: 优化器，无默认值
+    :param PATH: 模型存储路径，无默认值
+    :param num_epochs: 训练迭代次数，默认：1
+    :param CUDA_ID: GPU ID号，默认：0
+    :param isClassfier: 是否分类，默认：True
+    :return: 无返回值，保存最优模型
     """
     if torch.cuda.is_available():
         device = torch.device("cuda:"+CUDA_ID)
@@ -287,22 +314,22 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,
 
 
 # test
-def Flow(data,K_fea,HIDDEN_SIZE, OUTPUT_SIZE, PATH, num_epochs=1, LR=1e-3,
+def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, K_fea=1, num_epochs=1, LR=1e-3,
          LOSS_NAME = 'crossentropy', CUDA_ID="0", isClassfier=True, MODEL='RNN'):
     """
 
-    :param data:
-    :param K_fea:
-    :param HIDDEN_SIZE:
-    :param OUTPUT_SIZE:
-    :param PATH:
-    :param num_epochs:
-    :param LR:
-    :param LOSS_NAME:
-    :param CUDA_ID:
-    :param isClassfier:
-    :param MODEL:
-    :return:
+    :param data: 数据
+    :param HIDDEN_SIZE: 隐藏层神经元的个数，无默认值
+    :param OUTPUT_SIZE: 输出神经元的个数，无默认值
+    :param PATH:模型存储路径，无默认值
+    :param K_fea: 特征的列数，默认：1
+    :param num_epochs:训练迭代次数，默认：1
+    :param LR:学习率，默认：1e-3
+    :param LOSS_NAME:损失函数名称，默认：'crossentropy'
+    :param CUDA_ID:GPU ID号，默认：0
+    :param isClassfier:是否分类，默认：True
+    :param MODEL:模型
+    :return:无返回值，train_model内保存最优模型
     """
     train_loader, val_loader = load_data(data, K_fea, k_train=0.9, BATCH_SIZE_TRA=1, BATCH_SIZE_VAL=1, SHUFFLE_BOOL_TRA=True,
               SHUFFLE_BOOL_VAL=True, NUM_WORKERS_TRA=0, NUM_WORKERS_VAL=0, isClassfier=isClassfier,LOSSNAME=LOSS_NAME)
@@ -314,10 +341,10 @@ def Flow(data,K_fea,HIDDEN_SIZE, OUTPUT_SIZE, PATH, num_epochs=1, LR=1e-3,
 def load_model_test(PATH,data,isClassfier=True):
     """
 
-    :param PATH:
-    :param data:
-    :param isClassfier:
-    :return:
+    :param PATH:保存的模型路径
+    :param data:数据
+    :param isClassfier:是否为分类，默认True
+    :return:测试数据data_x, 测试结果data_y
     """
     # Model class must be defined somewhere
     model = torch.load(PATH)
