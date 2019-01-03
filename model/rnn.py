@@ -226,6 +226,9 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
         if LOSS_NAME == 'MSELoss':
             criterion = nn.MSELoss()
             print('MSELoss')
+        else:
+            criterion = nn.MSELoss()
+            print('MSELoss')
 
     return model, optimizer, criterion
 
@@ -366,10 +369,12 @@ def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1, K_fea=1, num_epochs=1, LR=1
 
     """For test"""
     if isBatchTes:
-        pred_y = load_model_test(PATH,test_loader,isClassfier=True,isBatchTes=isBatchTes,Seq=Seq,K_fea=K_fea)
+        data_y, pred_y = load_model_test(PATH,test_loader,isClassfier=isClassfier,isBatchTes=isBatchTes,Seq=Seq,K_fea=K_fea)
     else:
         # print(type(test_loader))
-        pred_y = load_model_test(PATH, test_loader[0], isClassfier=True, isBatchTes=isBatchTes,Seq=Seq,K_fea=K_fea)
+        data_y, pred_y = load_model_test(PATH, test_loader, isClassfier=isClassfier, isBatchTes=isBatchTes,Seq=Seq,K_fea=K_fea)
+
+    return data_y, pred_y
 
 
 # save whole model
@@ -377,7 +382,7 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1):
     """
 
     :param PATH:保存的模型路径
-    :param data:数据
+    :param data:测试数据
     :param isClassfier:是否为分类，默认True
     :param isBatchTes: 测试集是否使用Batch， 默认: False
     :param Seq: 时间序列数，默认：1
@@ -390,27 +395,32 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1):
 
     if isBatchTes:
         pred_y = torch.Tensor([])
+        data_y = torch.Tensor([])
+        # data_x = torch.Tensor([])
         for step_0,(test_x, test_y) in enumerate(data):
             test_x = test_x.view(-1,Seq,K_fea)
             output = model(test_x)
             print(output.size())
             pred_y = torch.cat((pred_y,output),0)
+            data_y = torch.cat((data_y, test_y), 0)
+            # data_x = torch.cat((data_x, test_x), 0)
 
     else:
 
         # 1. simple, not many samples
-        data_x = torch.Tensor(np.array(data))
+        data_x = torch.Tensor(np.array(data[0]))
+        data_y = data[1]
 
         data_x = data_x.view(-1,Seq,K_fea)
         # print(data_x.size())
         pred_y = model(data_x)
 
-
     if isClassfier:
         _, pred_y = torch.max(pred_y, 1)
     else:
         pred_y, _ = torch.max(pred_y, 1)
-    return pred_y
+
+    return data_y.detach().numpy(), pred_y.detach().numpy()
 
 
 # save parameters
@@ -434,12 +444,11 @@ if __name__ =='__main__':
     path = './model_save/model_params.pkl'
     data_test = data[:,:4]
 
+    data_y, pred_y = Flow(data=data,Seq=1, K_fea=4,HIDDEN_SIZE=20,OUTPUT_SIZE=2,PATH=path,num_epochs=10,LR=0.1,isClassfier=True,MODEL='LSTM')
 
-    Flow(data=data,Seq=1, K_fea=4,HIDDEN_SIZE=20,OUTPUT_SIZE=2,PATH=path,num_epochs=10,LR=0.1,isClassfier=True,MODEL='LSTM')
-
-    # load model | predict/test
+    """load model | predict/test"""
     # data_test should only have feature
-    data_y = load_model_test(path,data_test,isClassfier=True,Seq=1,K_fea=4)
+    # data_y, pred_y = load_model_test(path,data_test,isClassfier=True,Seq=1,K_fea=4)
     print(data_y)
     print(data[:,4])
 
