@@ -8,31 +8,44 @@ import matplotlib.pyplot as plt
 
 
 # data
-def load_data(data,k_fea=1,k_train=0.9,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,SHUFFLE_BOOL_TRA=False,
-              SHUFFLE_BOOL_VAL=False,NUM_WORKERS_TRA=0,NUM_WORKERS_VAL=0,isClassfier=True):
+def load_data(data,k_fea=1,k_train=0.7,k_val=0.2,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1,SHUFFLE_BOOL_TRA=False,
+              SHUFFLE_BOOL_VAL=False,SHUFFLE_BOOL_TES=False,NUM_WORKERS_TRA=0,NUM_WORKERS_VAL=0,NUM_WORKERS_TES=0,isClassfier=True,isBatchTes=False,):
     """
 
     :param data: 数据
     :param k_fea: 特征的列数，默认：1
-    :param k_train: 训练集所占比例，默认：0.9
+    :param k_train: 训练集所占比例，默认：0.7
+    :param k_val: 验证集所占比例，默认：0.2
     :param BATCH_SIZE_TRA: 训练集批处理量，默认：1
     :param BATCH_SIZE_VAL: 验证集批处理量，默认：1
+    :param BATCH_SIZE_TES: 测试集批处理量，默认：1
     :param SHUFFLE_BOOL_TRA: 训练集是否打乱，默认：False （不打乱）
-    :param SHUFFLE_BOOL_VAL: 测试集是否打乱，默认：False （不打乱）
+    :param SHUFFLE_BOOL_VAL: 验证集是否打乱，默认：False （不打乱）
+    :param SHUFFLE_BOOL_TES: 测试集是否打乱，默认：False （不打乱）
     :param NUM_WORKERS_TRA:  训练集中用于数据加载的子进程数，默认：0
-    :param NUM_WORKERS_VAL: 测试集中用于数据加载的子进程数，默认：0
+    :param NUM_WORKERS_VAL: 验证集中用于数据加载的子进程数，默认：0
+    :param NUM_WORKERS_TES: 测试集中用于数据加载的子进程数，默认：0
     :param isClassfier: 是否是分类，默认：True
-    :return: 返回训练数据装载器 train_loader, 测试数据装载器val_loader
+    :param isBatchTes: 测试集是否使用Batch， 默认: False
+    :return: 返回 训练数据装载器 train_loader, 验证数据装载器 val_loader, 测试数据装载器 test_loader
     """
     # k_fea(特征所在最后一列的索引)
     data_length = len(data)
+    train_size = int(data_length * k_train)
+    val_size = int(data_length * k_val)
+    test_size = data_length - val_size
     data = np.array(data)
-    if isClassfier:
-        x_train = torch.FloatTensor(np.array(data[:int(k_train * data_length), :k_fea]))
-        y_train = torch.LongTensor(np.array(data[:int(k_train * data_length), k_fea]))
 
-        x_val = torch.FloatTensor(np.array(data[int(k_train * data_length):, :k_fea]))
-        y_val = torch.LongTensor(np.array(data[int(k_train * data_length):, k_fea]))
+
+    if isClassfier:
+        x_train = torch.FloatTensor(np.array(data[:train_size, :k_fea]))
+        y_train = torch.LongTensor(np.array(data[:train_size, k_fea]))
+
+        x_val = torch.FloatTensor(np.array(data[train_size:(train_size + val_size), :k_fea]))
+        y_val = torch.LongTensor(np.array(data[train_size:(train_size + val_size), k_fea]))
+
+        x_test = torch.FloatTensor(np.array(data[(train_size + val_size):, :k_fea]))
+        y_test = torch.LongTensor(np.array(data[(train_size + val_size):, k_fea]))
         # if LOSSNAME == 'MSELoss':
         #     x_train = torch.FloatTensor(np.array(data[:int(k_train * data_length), :k_fea]))
         #     y_train = torch.FloatTensor(np.array(data[:int(k_train * data_length), k_fea]))
@@ -47,11 +60,14 @@ def load_data(data,k_fea=1,k_train=0.9,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,SHUFFLE
         #     x_val = torch.FloatTensor(np.array(data[int(k_train * data_length):, :k_fea]))
         #     y_val = torch.LongTensor(np.array(data[int(k_train * data_length):, k_fea]))
     else:
-        x_train = torch.FloatTensor(np.array(data[:int(k_train * data_length), :k_fea]))
-        y_train = torch.FloatTensor(np.array(data[:int(k_train * data_length), k_fea]))
+        x_train = torch.FloatTensor(np.array(data[:train_size, :k_fea]))
+        y_train = torch.FloatTensor(np.array(data[:train_size, k_fea]))
 
-        x_val = torch.FloatTensor(np.array(data[int(k_train * data_length):, :k_fea]))
-        y_val = torch.FloatTensor(np.array(data[int(k_train * data_length):, k_fea]))
+        x_val = torch.FloatTensor(np.array(data[train_size:(train_size + val_size), :k_fea]))
+        y_val = torch.FloatTensor(np.array(data[train_size:(train_size + val_size), k_fea]))
+
+        x_test = torch.FloatTensor(np.array(data[(train_size + val_size):, :k_fea]))
+        y_test = torch.FloatTensor(np.array(data[(train_size + val_size):, k_fea]))
 
 
     train_data = Data.TensorDataset(x_train, y_train)
@@ -64,7 +80,15 @@ def load_data(data,k_fea=1,k_train=0.9,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,SHUFFLE
                                              batch_size = BATCH_SIZE_VAL,
                                              shuffle = SHUFFLE_BOOL_VAL,
                                              num_workers = NUM_WORKERS_VAL,)
-    return train_loader, val_loader
+    if isBatchTes:
+        test_data = Data.TensorDataset(x_test, y_test)
+        test_loader = torch.utils.data.DataLoader(dataset=test_data,
+                                             batch_size=BATCH_SIZE_TES,
+                                             shuffle=SHUFFLE_BOOL_TES,
+                                             num_workers=NUM_WORKERS_TES, )
+        return train_loader, val_loader, test_loader
+    else:
+        return train_loader, val_loader, (x_test,y_test)
 
 
 # model
@@ -100,9 +124,8 @@ class RNN(nn.Module):
     # def forward(self,x,h_state):
     def forward(self, x):
         """
-
-        :param x: 输入数据维度，
-        :return:
+        :param x: 输入数据维度，BATCH_FIRST 为 True，(batch, seq, input_size)
+        :return: 输出
         """
         # x (batch, seq , feature)
         # h_state (num_layers * num_directions, batch, hidden_size)
@@ -177,7 +200,7 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
     #     model = LSTM(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE, NUM_LAYERS=1, NONLINEARITY='tanh',
     #                 BIAS_RNN_BOOL=True, BATCH_FIRST=True, DROPOUT_PRO=0, BIDIRECTIONAL_BOOL=False)
     if MODEL == 'LSTM':
-        model = LSTM(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE, NUM_LAYERS=1,BIAS_RNN_BOOL=True,
+        model = LSTM(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE, NUM_LAYERS=1,BIAS_LSTM_BOOL=True,
                      BATCH_FIRST=True, DROPOUT_PRO=0, BIDIRECTIONAL_BOOL=False)
 
 
@@ -209,18 +232,20 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
 
 # train
 def train_model(model,train_loader,val_loader,criterion,optimizer,
-                PATH,num_epochs=1,CUDA_ID="0",isClassfier=True):
+                PATH,num_epochs=1,CUDA_ID="0",isClassfier=True,Seq=1,K_fea=1):
     """
 
     :param model: 模型，需传入，无默认值
     :param train_loader: 练数据装载器，无默认值
-    :param val_loader: 测试数据装载器，无默认值
+    :param val_loader: 验证数据装载器，无默认值
     :param criterion: 损失函数，无默认值
     :param optimizer: 优化器，无默认值
     :param PATH: 模型存储路径，无默认值
     :param num_epochs: 训练迭代次数，默认：1
     :param CUDA_ID: GPU ID号，默认：0
     :param isClassfier: 是否分类，默认：True
+    :param Seq: 时间序列数，默认：1
+    :param K_fea: 特征的列数，默认：1
     :return: 无返回值，保存最优模型
     """
     if torch.cuda.is_available():
@@ -246,11 +271,11 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,
         # h_state = 0
         for step_0, (train_x, train_y) in enumerate(train_loader):
             # print(train_x.size())
-            train_x = train_x.view(-1,1,4)
+            train_x = train_x.view(-1,Seq,K_fea)
             # output_tra, h_state= model(train_x,h_state) #  output
             output_tra = model(train_x)  # output
             # h_state = h_state.data
-            loss_tra = criterion(output_tra, train_y)  # cross entropy loss
+            loss_tra = criterion(output_tra, train_y)
             optimizer.zero_grad()  # clear gradients for this training step
             loss_tra.backward()  # backpropagation, compute gradients
             optimizer.step()  # apply gradients
@@ -273,7 +298,7 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,
         model.eval()
         for step_1, (val_x, val_y) in enumerate(val_loader):
 
-            val_x = val_x.view(-1, 1, 4)
+            val_x = val_x.view(-1, Seq, K_fea)
             # output_val = model(val_x,h_state) #  output
             output_val = model(val_x)  # output
             loss = criterion(output_val, val_y)  # cross entropy loss
@@ -314,14 +339,15 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,
 
 
 # test
-def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, K_fea=1, num_epochs=1, LR=1e-3,
-         LOSS_NAME = 'crossentropy', CUDA_ID="0", isClassfier=True, MODEL='RNN'):
+def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1, K_fea=1, num_epochs=1, LR=1e-3,
+         LOSS_NAME = 'crossentropy', CUDA_ID="0", isClassfier=True, MODEL='RNN',isBatchTes=False):
     """
 
     :param data: 数据
     :param HIDDEN_SIZE: 隐藏层神经元的个数，无默认值
     :param OUTPUT_SIZE: 输出神经元的个数，无默认值
     :param PATH:模型存储路径，无默认值
+    :param Seq: 时间序列数，默认：1
     :param K_fea: 特征的列数，默认：1
     :param num_epochs:训练迭代次数，默认：1
     :param LR:学习率，默认：1e-3
@@ -329,38 +355,62 @@ def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, K_fea=1, num_epochs=1, LR=1e-3,
     :param CUDA_ID:GPU ID号，默认：0
     :param isClassfier:是否分类，默认：True
     :param MODEL:模型
+    :param isBatchTes: 测试集是否使用Batch， 默认: False
     :return:无返回值，train_model内保存最优模型
     """
-    train_loader, val_loader = load_data(data, K_fea, k_train=0.9, BATCH_SIZE_TRA=1, BATCH_SIZE_VAL=1, SHUFFLE_BOOL_TRA=True,
-              SHUFFLE_BOOL_VAL=True, NUM_WORKERS_TRA=0, NUM_WORKERS_VAL=0, isClassfier=isClassfier,LOSSNAME=LOSS_NAME)
+    train_loader, val_loader, test_loader = load_data(data, K_fea, k_train=0.7,k_val=0.2, BATCH_SIZE_TRA=1, BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1, SHUFFLE_BOOL_TRA=True,
+              SHUFFLE_BOOL_VAL=True, SHUFFLE_BOOL_TES=True,NUM_WORKERS_TRA=0, NUM_WORKERS_VAL=0, NUM_WORKERS_TES=0,isClassfier=isClassfier,isBatchTes=False)
     model, optimizer, criterion = construct_model_opt(K_fea, HIDDEN_SIZE, OUTPUT_SIZE, LR=LR, OPT='Adam', WEIGHT_DECAY=0,
                         LOSS_NAME=LOSS_NAME, MODEL=MODEL,isClassfier=isClassfier)
-    train_model(model, train_loader, val_loader, criterion, optimizer,PATH,num_epochs,CUDA_ID,isClassfier)
+    train_model(model, train_loader, val_loader, criterion, optimizer,PATH,num_epochs,CUDA_ID,isClassfier,Seq,K_fea)
+
+    """For test"""
+    if isBatchTes:
+        pred_y = load_model_test(PATH,test_loader,isClassfier=True,isBatchTes=isBatchTes,Seq=Seq,K_fea=K_fea)
+    else:
+        # print(type(test_loader))
+        pred_y = load_model_test(PATH, test_loader[0], isClassfier=True, isBatchTes=isBatchTes,Seq=Seq,K_fea=K_fea)
+
 
 # save whole model
-def load_model_test(PATH,data,isClassfier=True):
+def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1):
     """
 
     :param PATH:保存的模型路径
     :param data:数据
     :param isClassfier:是否为分类，默认True
-    :return:测试数据data_x, 测试结果data_y
+    :param isBatchTes: 测试集是否使用Batch， 默认: False
+    :param Seq: 时间序列数，默认：1
+    :param K_fea: 特征的列数，默认：1
+    :return:测试数据的预测结果 pred_y
     """
     # Model class must be defined somewhere
     model = torch.load(PATH)
     model.eval()
 
-    # 1. simple, not many samples
-    data_x = torch.Tensor(np.array(data))
+    if isBatchTes:
+        pred_y = torch.Tensor([])
+        for step_0,(test_x, test_y) in enumerate(data):
+            test_x = test_x.view(-1,Seq,K_fea)
+            output = model(test_x)
+            print(output.size())
+            pred_y = torch.cat((pred_y,output),0)
 
-    data_x = data_x.view(-1,1,4)
-    # print(data_x.size())
-    data_y = model(data_x)
-    if isClassfier:
-        _, data_y = torch.max(data_y, 1)
     else:
-        data_y, _ = torch.max(data_y, 1)
-    return data_x, data_y
+
+        # 1. simple, not many samples
+        data_x = torch.Tensor(np.array(data))
+
+        data_x = data_x.view(-1,Seq,K_fea)
+        # print(data_x.size())
+        pred_y = model(data_x)
+
+
+    if isClassfier:
+        _, pred_y = torch.max(pred_y, 1)
+    else:
+        pred_y, _ = torch.max(pred_y, 1)
+    return pred_y
 
 
 # save parameters
@@ -385,11 +435,11 @@ if __name__ =='__main__':
     data_test = data[:,:4]
 
 
-    Flow(data=data,K_fea=4,HIDDEN_SIZE=20,OUTPUT_SIZE=2,PATH=path,num_epochs=10,LR=0.1,isClassfier=True,MODEL='LSTM')
+    Flow(data=data,Seq=1, K_fea=4,HIDDEN_SIZE=20,OUTPUT_SIZE=2,PATH=path,num_epochs=10,LR=0.1,isClassfier=True,MODEL='LSTM')
 
     # load model | predict/test
     # data_test should only have feature
-    data_x, data_y = load_model_test(path,data_test,isClassfier=True)
+    data_y = load_model_test(path,data_test,isClassfier=True,Seq=1,K_fea=4)
     print(data_y)
     print(data[:,4])
 
