@@ -25,9 +25,10 @@ def load_data(data,k_fea=1,k_train=0.7,k_val=0.2,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL
     :param NUM_WORKERS_TRA:  训练集中用于数据加载的子进程数，默认：0
     :param NUM_WORKERS_VAL: 验证集中用于数据加载的子进程数，默认：0
     :param NUM_WORKERS_TES: 测试集中用于数据加载的子进程数，默认：0
-    :param isClassfier: 是否是分类，默认：True
+    :param isClassfier: 是否为分类，默认：True
     :param isBatchTes: 测试集是否使用Batch， 默认: False
-    :return: 返回 训练数据装载器 train_loader, 验证数据装载器 val_loader, 测试数据装载器 test_loader
+    :return: isBatchTes为True 返回 训练数据装载器 train_loader, 验证数据装载器 val_loader, 测试数据装载器 test_loader
+             isBatchTes为False 返回 训练数据装载器 train_loader, 验证数据装载器 val_loader, 测试数据元组(x_test,y_test) (测试集特征，测试集真实值)
     """
     # k_fea(特征所在最后一列的索引)
     data_length = len(data)
@@ -125,7 +126,7 @@ class RNN(nn.Module):
     def forward(self, x):
         """
         :param x: 输入数据维度，BATCH_FIRST 为 True，(batch, seq, input_size)
-        :return: 输出
+        :return: 输出数据维度 (batch, output_size)
         """
         # x (batch, seq , feature)
         # h_state (num_layers * num_directions, batch, hidden_size)
@@ -133,6 +134,7 @@ class RNN(nn.Module):
         r_out, h_state = self.rnn(x)
         # choose r_out at the last time step
         out = self.out(r_out[:,-1,:])
+
         # return out, h_state
         return out
 
@@ -166,6 +168,11 @@ class LSTM(nn.Module):
 
     # def forward(self,x,h_state):
     def forward(self, x):
+        """
+
+        :param x: 输入数据维度，BATCH_FIRST 为 True，(batch, seq, input_size)
+        :return: 输出数据维度 (batch, output_size)
+        """
         # x (batch, seq , feature)
         # h_state (num_layers * num_directions, batch, hidden_size)
         # r_out (batch, seq , num_directions * hidden_size)
@@ -189,7 +196,7 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
     :param WEIGHT_DECAY: 权重衰减，默认：0
     :param LOSS_NAME: 损失函数名称，默认：'crossentropy'
     :param MODEL: 模型，默认：'RNN'
-    :param isClassfier:是否分类，默认：True
+    :param isClassfier:是否为分类，默认：True
     :return: 返回 模型 model, 优化器 optimizer, 损失函数 criterion
     """
 
@@ -227,8 +234,8 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
             criterion = nn.MSELoss()
             print('MSELoss')
         else:
-            criterion = nn.MSELoss()
-            print('MSELoss')
+            criterion = nn.L1Loss()
+            print('L1Loss')
 
     return model, optimizer, criterion
 
@@ -275,8 +282,11 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,
         for step_0, (train_x, train_y) in enumerate(train_loader):
             # print(train_x.size())
             train_x = train_x.view(-1,Seq,K_fea)
+            # print(train_x.size())
+            # print(train_y.size())
             # output_tra, h_state= model(train_x,h_state) #  output
             output_tra = model(train_x)  # output
+            # print(output_tra.size())
             # h_state = h_state.data
             loss_tra = criterion(output_tra, train_y)
             optimizer.zero_grad()  # clear gradients for this training step
@@ -345,7 +355,8 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,
 def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1, K_fea=1, num_epochs=1, LR=1e-3,
          LOSS_NAME = 'crossentropy', CUDA_ID="0", isClassfier=True, MODEL='RNN',isBatchTes=False):
     """
-
+    若是分类，OUTPUT_SIZE应该与标签Label类别数一致；
+    若是回归，OUTPUT_SIZE应该为1
     :param data: 数据
     :param HIDDEN_SIZE: 隐藏层神经元的个数，无默认值
     :param OUTPUT_SIZE: 输出神经元的个数，无默认值
@@ -357,7 +368,7 @@ def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1, K_fea=1, num_epochs=1, LR=1
     :param LOSS_NAME:损失函数名称，默认：'crossentropy'
     :param CUDA_ID:GPU ID号，默认：0
     :param isClassfier:是否分类，默认：True
-    :param MODEL:模型
+    :param MODEL:模型, 默认:'RNN'
     :param isBatchTes: 测试集是否使用Batch， 默认: False
     :return:无返回值，train_model内保存最优模型
     """
@@ -387,7 +398,7 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1):
     :param isBatchTes: 测试集是否使用Batch， 默认: False
     :param Seq: 时间序列数，默认：1
     :param K_fea: 特征的列数，默认：1
-    :return:测试数据的预测结果 pred_y
+    :return:测试数据的真实值 data_y 测试数据的预测结果 pred_y
     """
     # Model class must be defined somewhere
     model = torch.load(PATH)
@@ -400,7 +411,7 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1):
         for step_0,(test_x, test_y) in enumerate(data):
             test_x = test_x.view(-1,Seq,K_fea)
             output = model(test_x)
-            print(output.size())
+            # print(output.size())
             pred_y = torch.cat((pred_y,output),0)
             data_y = torch.cat((data_y, test_y), 0)
             # data_x = torch.cat((data_x, test_x), 0)
@@ -418,7 +429,8 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1):
     if isClassfier:
         _, pred_y = torch.max(pred_y, 1)
     else:
-        pred_y, _ = torch.max(pred_y, 1)
+        # pred_y, _ = torch.max(pred_y, 1)
+        pass
 
     return data_y.detach().numpy(), pred_y.detach().numpy()
 

@@ -53,11 +53,12 @@ def create_dataset1(dataset, look_back=2):
 path = './model_save/model_params_air.pkl'
 
 data = create_dataset1(dataset)
+# print(np.shape(data))
 
-data_y, pred_y = rnn.Flow(data=data,Seq=1,K_fea=2,HIDDEN_SIZE=20,OUTPUT_SIZE=2,PATH=path,num_epochs=10,LR=0.1,isClassfier=False,MODEL='LSTM')
+data_y, pred_y = rnn.Flow(data=data,Seq=1,K_fea=2,HIDDEN_SIZE=20,OUTPUT_SIZE=1,PATH=path,num_epochs=10,LR=0.1,isClassfier=False,MODEL='LSTM',LOSS_NAME='L1Loss')
 
 # rnn.load_model_test(path,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1)
-
+# print(pred_y)
 pred_y.reshape(-1)
 data_y.reshape(-1)
 plt.plot(pred_y, 'r', label='prediction')
