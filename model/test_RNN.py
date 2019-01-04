@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import rnn
 
 data_csv = pd.read_csv('../data/data.csv', usecols=[1])
-# plt.plot(data_csv)
-
+plt.plot(data_csv)
+plt.show()
 # 数据预处理
 data_csv = data_csv.dropna()
 dataset = data_csv.values
@@ -55,7 +55,7 @@ path = './model_save/model_params_air.pkl'
 data = create_dataset1(dataset)
 # print(np.shape(data))
 
-data_y, pred_y = rnn.Flow(data=data,Seq=1,K_fea=2,HIDDEN_SIZE=20,OUTPUT_SIZE=1,PATH=path,num_epochs=10,LR=0.1,isClassfier=False,MODEL='LSTM',LOSS_NAME='L1Loss')
+data_y, pred_y = rnn.Flow(data=data,Seq=1,K_fea=2,HIDDEN_SIZE=20,OUTPUT_SIZE=1,PATH=path,num_epochs=100,LR=0.1,isClassfier=False,MODEL='LSTM',LOSS_NAME='L1Loss')
 
 # rnn.load_model_test(path,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1)
 # print(pred_y)

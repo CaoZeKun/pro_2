@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 def load_data(data,k_fea=1,k_train=0.7,k_val=0.2,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1,SHUFFLE_BOOL_TRA=False,
               SHUFFLE_BOOL_VAL=False,SHUFFLE_BOOL_TES=False,NUM_WORKERS_TRA=0,NUM_WORKERS_VAL=0,NUM_WORKERS_TES=0,isClassfier=True,isBatchTes=False,):
     """
-
+    目的：装载训练/验证/测试数据
     :param data: 数据
     :param k_fea: 特征的列数，默认：1
     :param k_train: 训练集所占比例，默认：0.7
@@ -98,7 +98,7 @@ class RNN(nn.Module):
     def __init__(self,INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,NUM_LAYERS=1,NONLINEARITY='tanh',
                  BIAS_RNN_BOOL=True,BATCH_FIRST=True,DROPOUT_PRO=0,BIDIRECTIONAL_BOOL=False):
         """
-
+        目的：RNN模型初始化
         :param INPUT_SIZE: 数据输入的特征个数，无默认值
         :param HIDDEN_SIZE: 隐藏层神经元的个数，无默认值
         :param OUTPUT_SIZE: 输出神经元的个数，无默认值
@@ -125,6 +125,7 @@ class RNN(nn.Module):
     # def forward(self,x,h_state):
     def forward(self, x):
         """
+        目的：前向传播
         :param x: 输入数据维度，BATCH_FIRST 为 True，(batch, seq, input_size)
         :return: 输出数据维度 (batch, output_size)
         """
@@ -144,7 +145,7 @@ class LSTM(nn.Module):
     def __init__(self,INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,NUM_LAYERS=1,BIAS_LSTM_BOOL=True,
                  BATCH_FIRST=True,DROPOUT_PRO=0,BIDIRECTIONAL_BOOL=False):
         """
-
+        目的：LSTM模型初始化
         :param INPUT_SIZE: 数据输入的特征个数，无默认值
         :param HIDDEN_SIZE: 隐藏层神经元的个数，无默认值
         :param OUTPUT_SIZE: 输出神经元的个数，无默认值
@@ -169,7 +170,7 @@ class LSTM(nn.Module):
     # def forward(self,x,h_state):
     def forward(self, x):
         """
-
+        目的：LSTM模型前向传播
         :param x: 输入数据维度，BATCH_FIRST 为 True，(batch, seq, input_size)
         :return: 输出数据维度 (batch, output_size)
         """
@@ -187,7 +188,7 @@ class LSTM(nn.Module):
 def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',WEIGHT_DECAY=0,
                         LOSS_NAME = 'crossentropy',MODEL = 'RNN', isClassfier=True):
     """
-
+    目的：构建模型，选择优化算法，选择损失函数
     :param INPUT_SIZE: 数据输入的特征个数，无默认值
     :param HIDDEN_SIZE: 隐藏层神经元的个数，无默认值
     :param OUTPUT_SIZE: 输出神经元的个数，无默认值
@@ -244,7 +245,7 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
 def train_model(model,train_loader,val_loader,criterion,optimizer,
                 PATH,num_epochs=1,CUDA_ID="0",isClassfier=True,Seq=1,K_fea=1):
     """
-
+    目的：训练模型
     :param model: 模型，需传入，无默认值
     :param train_loader: 练数据装载器，无默认值
     :param val_loader: 验证数据装载器，无默认值
@@ -355,6 +356,7 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,
 def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1, K_fea=1, num_epochs=1, LR=1e-3,
          LOSS_NAME = 'crossentropy', CUDA_ID="0", isClassfier=True, MODEL='RNN',isBatchTes=False):
     """
+    目的：整体流程: 数据装载 -> 模型构建 -> 模型训练(保存)
     若是分类，OUTPUT_SIZE应该与标签Label类别数一致；
     若是回归，OUTPUT_SIZE应该为1
     :param data: 数据
@@ -391,7 +393,7 @@ def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1, K_fea=1, num_epochs=1, LR=1
 # save whole model
 def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1):
     """
-
+    目的：加载训练好的模型，进行测试/预测
     :param PATH:保存的模型路径
     :param data:测试数据
     :param isClassfier:是否为分类，默认True
