@@ -99,9 +99,9 @@ class RNN(nn.Module):
                  BIAS_RNN_BOOL=True,BATCH_FIRST=True,DROPOUT_PRO=0,BIDIRECTIONAL_BOOL=False):
         """
         目的：RNN模型初始化
-        :param INPUT_SIZE: 数据输入的特征个数，无默认值
-        :param HIDDEN_SIZE: 隐藏层神经元的个数，无默认值
-        :param OUTPUT_SIZE: 输出神经元的个数，无默认值
+        :param INPUT_SIZE: 数据输入的特征个数
+        :param HIDDEN_SIZE: 隐藏层神经元的个数
+        :param OUTPUT_SIZE: 输出神经元的个数
         :param NUM_LAYERS: 隐藏层的深度，默认：1
         :param NONLINEARITY: 激活函数，默认：'tanh'
         :param BIAS_RNN_BOOL: 是否有偏置，默认：True
@@ -146,9 +146,9 @@ class LSTM(nn.Module):
                  BATCH_FIRST=True,DROPOUT_PRO=0,BIDIRECTIONAL_BOOL=False):
         """
         目的：LSTM模型初始化
-        :param INPUT_SIZE: 数据输入的特征个数，无默认值
-        :param HIDDEN_SIZE: 隐藏层神经元的个数，无默认值
-        :param OUTPUT_SIZE: 输出神经元的个数，无默认值
+        :param INPUT_SIZE: 数据输入的特征个数
+        :param HIDDEN_SIZE: 隐藏层神经元的个数
+        :param OUTPUT_SIZE: 输出神经元的个数
         :param NUM_LAYERS: 隐藏层的深度，默认：1
         :param BIAS_LSTM_BOOL: 是否有偏置，默认：True
         :param BATCH_FIRST: 调整数据维度，若False (seq_len, batch, input_size), 默认True (batch, seq, input_size)
@@ -189,11 +189,11 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
                         LOSS_NAME = 'crossentropy',MODEL = 'RNN', isClassfier=True):
     """
     目的：构建模型，选择优化算法，选择损失函数
-    :param INPUT_SIZE: 数据输入的特征个数，无默认值
-    :param HIDDEN_SIZE: 隐藏层神经元的个数，无默认值
-    :param OUTPUT_SIZE: 输出神经元的个数，无默认值
+    :param INPUT_SIZE: 数据输入的特征个数
+    :param HIDDEN_SIZE: 隐藏层神经元的个数
+    :param OUTPUT_SIZE: 输出神经元的个数
     :param LR: 学习率，默认：1e-3
-    :param OPT: 优化算法，默认：'Adam'
+    :param OPT: 优化算法，默认：'Adam' 可选 'Adagrad', 'SGD', 'Adam'
     :param WEIGHT_DECAY: 权重衰减，默认：0
     :param LOSS_NAME: 损失函数名称，默认：'crossentropy'
     :param MODEL: 模型，默认：'RNN'
@@ -217,6 +217,8 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
         optimizer = torch.optim.Adagrad(model.parameters(),lr = LR, weight_decay=WEIGHT_DECAY)
     elif OPT == 'SGD':
         optimizer = torch.optim.SGD(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
+    elif OPT == 'Adam':
+        optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 
@@ -246,12 +248,12 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,
                 PATH,num_epochs=1,CUDA_ID="0",isClassfier=True,Seq=1,K_fea=1):
     """
     目的：训练模型
-    :param model: 模型，需传入，无默认值
-    :param train_loader: 练数据装载器，无默认值
-    :param val_loader: 验证数据装载器，无默认值
-    :param criterion: 损失函数，无默认值
-    :param optimizer: 优化器，无默认值
-    :param PATH: 模型存储路径，无默认值
+    :param model: 模型
+    :param train_loader: 练数据装载器
+    :param val_loader: 验证数据装载器
+    :param criterion: 损失函数
+    :param optimizer: 优化器
+    :param PATH: 模型存储路径
     :param num_epochs: 训练迭代次数，默认：1
     :param CUDA_ID: GPU ID号，默认：0
     :param isClassfier: 是否分类，默认：True
@@ -360,9 +362,9 @@ def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1, K_fea=1, num_epochs=1, LR=1
     若是分类，OUTPUT_SIZE应该与标签Label类别数一致；
     若是回归，OUTPUT_SIZE应该为1
     :param data: 数据
-    :param HIDDEN_SIZE: 隐藏层神经元的个数，无默认值
-    :param OUTPUT_SIZE: 输出神经元的个数，无默认值
-    :param PATH:模型存储路径，无默认值
+    :param HIDDEN_SIZE: 隐藏层神经元的个数
+    :param OUTPUT_SIZE: 输出神经元的个数
+    :param PATH:模型存储路径
     :param Seq: 时间序列数，默认：1
     :param K_fea: 特征的列数，默认：1
     :param num_epochs:训练迭代次数，默认：1
@@ -402,6 +404,8 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1):
     :param K_fea: 特征的列数，默认：1
     :return:测试数据的真实值 data_y 测试数据的预测结果 pred_y
     """
+    USE_CUDA = torch.cuda.is_available()
+    device = torch.device("cuda0" if USE_CUDA else "cpu")
     # Model class must be defined somewhere
     model = torch.load(PATH)
     model.eval()
@@ -463,7 +467,7 @@ if __name__ =='__main__':
     """load model | predict/test"""
     # data_test should only have feature
     # data_y, pred_y = load_model_test(path,data_test,isClassfier=True,Seq=1,K_fea=4)
-    print(data_y)
+    print(pred_y)
     print(data[:,4])
 
 
