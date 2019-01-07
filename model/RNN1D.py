@@ -309,10 +309,10 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_si
     :param criterion: 损失函数
     :param optimizer: 优化器
     :param PATH: 模型存储路径
+    :param window_size: 窗口大小
     :param num_epochs: 训练迭代次数，默认：1
     :param CUDA_ID: GPU ID号，默认：0
     :param isClassfier: 是否分类，默认：True
-    :param Seq: 时间序列数，默认：1
     :param K_fea: 特征的列数，默认：1
     :param BATCH_SIZE_TRA: 训练集批处理量，默认：1
     :param BATCH_SIZE_VAL: 验证集批处理量，默认：1
@@ -423,6 +423,7 @@ def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1,window_size=2, K_fea=1,k_tra
     :param OUTPUT_SIZE: 输出神经元的个数
     :param PATH:模型存储路径
     :param Seq: 时间序列数，默认：1
+    :param window_size: 窗口大小
     :param K_fea: 特征的列数，默认：1
     :param k_train: 训练集所占比例，默认：0.7
     :param k_val: 验证集所占比例，默认：0.2
