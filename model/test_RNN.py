@@ -53,7 +53,7 @@ def create_dataset1(dataset, look_back=2):
 path = './model_save/model_params_air.pkl'
 
 data = create_dataset1(dataset)
-# print(np.shape(data))
+print(np.shape(data))
 
 data_y, pred_y = rnn.Flow(data=data,Seq=1,K_fea=2,HIDDEN_SIZE=20,OUTPUT_SIZE=1,PATH=path,num_epochs=100,LR=0.1,isClassfier=False,MODEL='LSTM',LOSS_NAME='L1Loss')
 

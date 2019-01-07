@@ -178,8 +178,11 @@ class LSTM(nn.Module):
         # h_state (num_layers * num_directions, batch, hidden_size)
         # r_out (batch, seq , num_directions * hidden_size)
         r_out, (h_n, h_c) = self.lstm(x)
+        print(r_out.size())
+        print(r_out[:,-1,:].size())
         # choose r_out at the last time step
         out = self.out(r_out[:,-1,:])
+        
         # return out, h_state
         return out
 
@@ -193,10 +196,10 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
     :param HIDDEN_SIZE: 隐藏层神经元的个数
     :param OUTPUT_SIZE: 输出神经元的个数
     :param LR: 学习率，默认：1e-3
-    :param OPT: 优化算法，默认：'Adam' 可选 'Adagrad', 'SGD', 'Adam'
+    :param OPT: 优化算法，默认：'Adam' ,可选 'Adagrad', 'SGD', 'Adam'
     :param WEIGHT_DECAY: 权重衰减，默认：0
-    :param LOSS_NAME: 损失函数名称，默认：'crossentropy'
-    :param MODEL: 模型，默认：'RNN'
+    :param LOSS_NAME: 损失函数名称，默认：'crossentropy' ,可选 'MSELoss', 'crossentropy', 'L1Loss'
+    :param MODEL: 模型，默认：'RNN' ,可选'RNN', 'LSTM'
     :param isClassfier:是否为分类，默认：True
     :return: 返回 模型 model, 优化器 optimizer, 损失函数 criterion
     """
@@ -244,8 +247,8 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
 
 
 # train
-def train_model(model,train_loader,val_loader,criterion,optimizer,
-                PATH,num_epochs=1,CUDA_ID="0",isClassfier=True,Seq=1,K_fea=1):
+def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,num_epochs=1,CUDA_ID="0",
+                isClassfier=True,Seq=1,K_fea=1,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,):
     """
     目的：训练模型
     :param model: 模型
@@ -259,6 +262,8 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,
     :param isClassfier: 是否分类，默认：True
     :param Seq: 时间序列数，默认：1
     :param K_fea: 特征的列数，默认：1
+    :param BATCH_SIZE_TRA: 训练集批处理量，默认：1
+    :param BATCH_SIZE_VAL: 验证集批处理量，默认：1
     :return: 无返回值，保存最优模型
     """
     if torch.cuda.is_available():
@@ -284,12 +289,12 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,
         # h_state = 0
         for step_0, (train_x, train_y) in enumerate(train_loader):
             # print(train_x.size())
-            train_x = train_x.view(-1,Seq,K_fea)
+            train_x = train_x.view(BATCH_SIZE_TRA,-1,K_fea)
             # print(train_x.size())
-            # print(train_y.size())
+            print(train_y.size())
             # output_tra, h_state= model(train_x,h_state) #  output
             output_tra = model(train_x)  # output
-            # print(output_tra.size())
+            print(output_tra.size())
             # h_state = h_state.data
             loss_tra = criterion(output_tra, train_y)
             optimizer.zero_grad()  # clear gradients for this training step
@@ -314,7 +319,7 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,
         model.eval()
         for step_1, (val_x, val_y) in enumerate(val_loader):
 
-            val_x = val_x.view(-1, Seq, K_fea)
+            val_x = val_x.view(BATCH_SIZE_VAL, -1, K_fea)
             # output_val = model(val_x,h_state) #  output
             output_val = model(val_x)  # output
             loss = criterion(output_val, val_y)  # cross entropy loss
@@ -355,8 +360,8 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,
 
 
 # test
-def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1, K_fea=1, num_epochs=1, LR=1e-3,
-         LOSS_NAME = 'crossentropy', CUDA_ID="0", isClassfier=True, MODEL='RNN',isBatchTes=False):
+def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1, K_fea=1,k_train=0.7,k_val=0.2, num_epochs=1, LR=1e-3,LOSS_NAME = 'crossentropy',
+         CUDA_ID="0", isClassfier=True, MODEL='RNN',isBatchTes=False,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1):
     """
     目的：整体流程: 数据装载 -> 模型构建 -> 模型训练(保存)
     若是分类，OUTPUT_SIZE应该与标签Label类别数一致；
@@ -367,6 +372,8 @@ def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1, K_fea=1, num_epochs=1, LR=1
     :param PATH:模型存储路径
     :param Seq: 时间序列数，默认：1
     :param K_fea: 特征的列数，默认：1
+    :param k_train: 训练集所占比例，默认：0.7
+    :param k_val: 验证集所占比例，默认：0.2
     :param num_epochs:训练迭代次数，默认：1
     :param LR:学习率，默认：1e-3
     :param LOSS_NAME:损失函数名称，默认：'crossentropy'
@@ -374,9 +381,12 @@ def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1, K_fea=1, num_epochs=1, LR=1
     :param isClassfier:是否分类，默认：True
     :param MODEL:模型, 默认:'RNN'
     :param isBatchTes: 测试集是否使用Batch， 默认: False
+    :param BATCH_SIZE_TRA: 训练集批处理量，默认：1
+    :param BATCH_SIZE_VAL: 验证集批处理量，默认：1
+    :param BATCH_SIZE_TES: 测试集批处理量，默认：1
     :return:无返回值，train_model内保存最优模型
     """
-    train_loader, val_loader, test_loader = load_data(data, K_fea, k_train=0.7,k_val=0.2, BATCH_SIZE_TRA=1, BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1, SHUFFLE_BOOL_TRA=True,
+    train_loader, val_loader, test_loader = load_data(data, K_fea, k_train=k_train,k_val=k_val, BATCH_SIZE_TRA=BATCH_SIZE_TRA, BATCH_SIZE_VAL=BATCH_SIZE_VAL,BATCH_SIZE_TES=BATCH_SIZE_TES, SHUFFLE_BOOL_TRA=True,
               SHUFFLE_BOOL_VAL=True, SHUFFLE_BOOL_TES=True,NUM_WORKERS_TRA=0, NUM_WORKERS_VAL=0, NUM_WORKERS_TES=0,isClassfier=isClassfier,isBatchTes=False)
     model, optimizer, criterion = construct_model_opt(K_fea, HIDDEN_SIZE, OUTPUT_SIZE, LR=LR, OPT='Adam', WEIGHT_DECAY=0,
                         LOSS_NAME=LOSS_NAME, MODEL=MODEL,isClassfier=isClassfier)
@@ -384,7 +394,7 @@ def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1, K_fea=1, num_epochs=1, LR=1
 
     """For test"""
     if isBatchTes:
-        data_y, pred_y = load_model_test(PATH,test_loader,isClassfier=isClassfier,isBatchTes=isBatchTes,Seq=Seq,K_fea=K_fea)
+        data_y, pred_y = load_model_test(PATH,test_loader,isClassfier=isClassfier,isBatchTes=isBatchTes,Seq=Seq,K_fea=K_fea,BATCH_SIZE_TES=BATCH_SIZE_TES)
     else:
         # print(type(test_loader))
         data_y, pred_y = load_model_test(PATH, test_loader, isClassfier=isClassfier, isBatchTes=isBatchTes,Seq=Seq,K_fea=K_fea)
@@ -393,7 +403,7 @@ def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1, K_fea=1, num_epochs=1, LR=1
 
 
 # save whole model
-def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1):
+def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1,CUDA_ID="0",BATCH_SIZE_TES=1):
     """
     目的：加载训练好的模型，进行测试/预测
     :param PATH:保存的模型路径
@@ -402,10 +412,12 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1):
     :param isBatchTes: 测试集是否使用Batch， 默认: False
     :param Seq: 时间序列数，默认：1
     :param K_fea: 特征的列数，默认：1
+    :param CUDA_ID: GPU ID号，默认：0
+    :param BATCH_SIZE_TES: 测试集批处理量，默认：1
     :return:测试数据的真实值 data_y 测试数据的预测结果 pred_y
     """
     USE_CUDA = torch.cuda.is_available()
-    device = torch.device("cuda0" if USE_CUDA else "cpu")
+    device = torch.device(("cuda:"+CUDA_ID) if USE_CUDA else "cpu")
     # Model class must be defined somewhere
     model = torch.load(PATH)
     model.eval()
@@ -415,7 +427,7 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1):
         data_y = torch.Tensor([])
         # data_x = torch.Tensor([])
         for step_0,(test_x, test_y) in enumerate(data):
-            test_x = test_x.view(-1,Seq,K_fea)
+            test_x = test_x.view(BATCH_SIZE_TES,-1,K_fea)
             output = model(test_x)
             # print(output.size())
             pred_y = torch.cat((pred_y,output),0)
@@ -423,7 +435,6 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1):
             # data_x = torch.cat((data_x, test_x), 0)
 
     else:
-
         # 1. simple, not many samples
         data_x = torch.Tensor(np.array(data[0]))
         data_y = data[1]
@@ -462,7 +473,8 @@ if __name__ =='__main__':
     path = './model_save/model_params.pkl'
     data_test = data[:,:4]
 
-    data_y, pred_y = Flow(data=data,Seq=1, K_fea=4,HIDDEN_SIZE=20,OUTPUT_SIZE=2,PATH=path,num_epochs=10,LR=0.1,isClassfier=True,MODEL='LSTM')
+    data_y, pred_y = Flow(data=data,Seq=1, K_fea=4,HIDDEN_SIZE=20,OUTPUT_SIZE=2,PATH=path,num_epochs=10,LR=0.1,
+                          isClassfier=True,MODEL='LSTM',BATCH_SIZE_TRA=4,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1)
 
     """load model | predict/test"""
     # data_test should only have feature

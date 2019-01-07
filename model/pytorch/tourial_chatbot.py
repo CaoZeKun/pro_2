@@ -26,7 +26,7 @@ def printLines(file, n=10):
     for line in lines[:10]:
         print(line)
 printLines(os.path.join(corpus,"movie_lines.txt"))
-
+printLines(os.path.join(corpus,"movie_conversations.txt"))
 
 # loadLines splits each line of the file into a dictionary of fields (lineID, characterID, movieID, character, text)
 # loadConversations groups fields of lines from loadLines into conversations based on movie_conversations.txt
@@ -57,11 +57,17 @@ def loadConversations(fileName, lines, fields):
             for i, field in enumerate(fields):
                 convObj[field] = values[i]
             # Convert string to list (convObj["utteranceIDs"] == "['L598485', 'L598486', ...]")
+            # print(convObj["utteranceIDs"])
             linesIds = eval(convObj["utteranceIDs"])
+            # print(linesIds)
             # Reassemble lines
             convObj["lines"] = []
             for lineId in linesIds:
                 convObj["lines"].append(lines[lineId])
+                # {'character1ID': 'u0', 'character2ID': 'u2', 'movieID': 'm0', 'utteranceIDs':
+                # "['L194', 'L195', 'L196', 'L197']\n", 'lines': [{'lineID': 'L194', 'characterID': 'u0',
+                # 'movieID': 'm0', 'character': 'BIANCA', 'text': 'Can we make this quick?  Roxanne Korrine and Andrew
+                #  Barrett are having an incredibly horrendous public break- up on the quad.  Again.\n'}]}
             conversations.append(convObj)
     return conversations
 
@@ -100,10 +106,47 @@ print("\nLoading conversations...")
 conversations = loadConversations(os.path.join(corpus, "movie_conversations.txt"),
                                   lines, MOVIE_CONVERSATIONS_FIELDS)
 
+# Write new csv file
+print("\nWriting newly formatted file...")
+with open(datafile, 'w', encoding='utf-8') as outputfile:
+    writer = csv.writer(outputfile, delimiter=delimiter, lineterminator='\n')
+    for pair in extractSentencePairs(conversations):
+        writer.writerow(pair)
+
+# Print a sample of lines
+print("\nSample lines from file:")
+printLines(datafile)
 
 
+# Defalut word tokens
+PAD_token = 0 # Used for padding short sentences
+SOS_token = 1 # Start-of-sentence token
+EOS_token = 2 # End-of-sentence token
 
 
+class Voc:
+    def __init__(self,name):
+        self.name = name
+        self.trimmed = False
+        self.word2index = {}
+        self.word2count = {}
+        self.index2word = {PAD_token:"PAD", SOS_token:"SOS", EOS_token:"EOS"}
+        self.num_words = 3 # Count SOS, EOS, PAD
+
+    def addSentence(self, sentence):
+        for word in sentence.split(' '):
+            self.addWord(word)
+
+    def addWord(self, word):
+        if word not in self.word2index:
+            self.word2index[word] = self.num_words
+            self.word2count = 1
+            self.index2word[self.num_words] = word
+            self.num_words += 1
+        else:
+            self.word2count[word] += 1
+
+    # Remove words below
 
 
 
