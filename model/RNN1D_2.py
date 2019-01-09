@@ -1,4 +1,4 @@
-"""input should be data(data_x, data_y)"""
+"""input should be data_x, data_y"""
 import torch
 from torch import nn
 import time
@@ -35,7 +35,7 @@ def create_dataset(data_x, data_y, window_size=2):
     return np.array(dataX), np.array(dataY)
 
 # data loader
-def load_data_loader(data,k_fea=1,k_train=0.7,k_val=0.2,window_size=2,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1,
+def load_data_loader1(data,k_fea=1,k_train=0.7,k_val=0.2,window_size=2,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1,
                      SHUFFLE_BOOL_TRA=False,SHUFFLE_BOOL_VAL=False,SHUFFLE_BOOL_TES=False,NUM_WORKERS_TRA=0,NUM_WORKERS_VAL=0,
                      NUM_WORKERS_TES=0,isClassfier=True,isBatchTes=False,DROP_LAST_TRA=False,DROP_LAST_VAL=False,DROP_LAST_TES=False):
     """
@@ -140,6 +140,114 @@ def load_data_loader(data,k_fea=1,k_train=0.7,k_val=0.2,window_size=2,BATCH_SIZE
     else:
         return train_loader, val_loader, (x_test,y_test)
 
+def load_data_loader(data,k_fea=1,k_train=0.7,k_val=0.2,window_size=2,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1,
+                     SHUFFLE_BOOL_TRA=False,SHUFFLE_BOOL_VAL=False,SHUFFLE_BOOL_TES=False,NUM_WORKERS_TRA=0,NUM_WORKERS_VAL=0,
+                     NUM_WORKERS_TES=0,isClassfier=True,isBatchTes=False,DROP_LAST_TRA=False,DROP_LAST_VAL=False,DROP_LAST_TES=False):
+    """
+    目的：装载训练/验证/测试数据
+    :param data: 数据(元组 （x, y）)
+    :param k_fea: 特征的列数，默认：1
+    :param k_train: 训练集所占比例，默认：0.7
+    :param k_val: 验证集所占比例，默认：0.2
+    :param window_size: 窗口大小
+    :param BATCH_SIZE_TRA: 训练集批处理量，默认：1
+    :param BATCH_SIZE_VAL: 验证集批处理量，默认：1
+    :param BATCH_SIZE_TES: 测试集批处理量，默认：1
+    :param SHUFFLE_BOOL_TRA: 训练集是否打乱，默认：False （不打乱）
+    :param SHUFFLE_BOOL_VAL: 验证集是否打乱，默认：False （不打乱）
+    :param SHUFFLE_BOOL_TES: 测试集是否打乱，默认：False （不打乱）
+    :param NUM_WORKERS_TRA:  训练集中用于数据加载的子进程数，默认：0
+    :param NUM_WORKERS_VAL: 验证集中用于数据加载的子进程数，默认：0
+    :param NUM_WORKERS_TES: 测试集中用于数据加载的子进程数，默认：0
+    :param DROP_LAST_TRA: 是否丢弃训练集最后一组不够一个批量的样本，默认False
+    :param DROP_LAST_VAL: 是否丢弃验证集最后一组不够一个批量的样本，默认False
+    :param DROP_LAST_TES: 是否丢弃测试集最后一组不够一个批量的样本，默认False
+    :param isClassfier: 是否为分类，默认：True
+    :param isBatchTes: 测试集是否使用Batch， 默认: False
+    :return: isBatchTes为True 返回 训练数据装载器 train_loader, 验证数据装载器 val_loader, 测试数据装载器 test_loader
+             isBatchTes为False 返回 训练数据装载器 train_loader, 验证数据装载器 val_loader, 测试数据元组(x_test,y_test) (测试集特征，测试集真实值)
+    """
+    # k_fea(特征所在最后一列的索引)
+    data_length = len(data[1])
+    train_size = int(data_length * k_train)
+    val_size = int(data_length * k_val)
+    test_size = data_length - val_size
+    # data = np.array(data)
+    data_x = data[0]
+    data_y = data[1]
+
+    x_train = np.array(data_x[:train_size,])
+    y_train = np.array(data_y[:train_size,])
+    # print(np.shape(x_train))
+    # print(np.shape(y_train))
+
+    x_val = np.array(data_x[train_size:(train_size + val_size), ])
+    y_val = np.array(data_y[train_size:(train_size + val_size), ])
+
+    x_test = np.array(data_x[(train_size + val_size):, ])
+    y_test = np.array(data_y[(train_size + val_size):, ])
+
+    x_train, y_train = create_dataset(x_train, y_train, window_size=window_size)
+    # print(np.shape(x_train))
+    x_val, y_val = create_dataset(x_val, y_val, window_size=window_size)
+    x_test, y_test = create_dataset(x_test, y_test, window_size=window_size)
+
+
+    if isClassfier:
+        x_train = torch.FloatTensor(x_train)
+        y_train = torch.LongTensor(y_train)
+
+        x_val = torch.FloatTensor(x_val)
+        y_val = torch.LongTensor(y_val)
+
+        x_test = torch.FloatTensor(x_test)
+        y_test = torch.LongTensor(y_test)
+        # if LOSSNAME == 'MSELoss':
+        #     x_train = torch.FloatTensor(np.array(data[:int(k_train * data_length), :k_fea]))
+        #     y_train = torch.FloatTensor(np.array(data[:int(k_train * data_length), k_fea]))
+        #
+        #     x_val = torch.FloatTensor(np.array(data[int(k_train * data_length):, :k_fea]))
+        #     y_val = torch.FloatTensor(np.array(data[int(k_train * data_length):, k_fea]))
+        #
+        # else:
+        #     x_train = torch.FloatTensor(np.array(data[:int(k_train * data_length), :k_fea]))
+        #     y_train = torch.LongTensor(np.array(data[:int(k_train * data_length), k_fea]))
+        #
+        #     x_val = torch.FloatTensor(np.array(data[int(k_train * data_length):, :k_fea]))
+        #     y_val = torch.LongTensor(np.array(data[int(k_train * data_length):, k_fea]))
+    else:
+        x_train = torch.FloatTensor(x_train)
+        y_train = torch.FloatTensor(y_train)
+
+        x_val = torch.FloatTensor(x_val)
+        y_val = torch.FloatTensor(y_val)
+
+        x_test = torch.FloatTensor(x_test)
+        y_test = torch.FloatTensor(y_test)
+
+
+    train_data = Data.TensorDataset(x_train, y_train)
+    train_loader = torch.utils.data.DataLoader(dataset = train_data,
+                                               batch_size = BATCH_SIZE_TRA,
+                                               shuffle = SHUFFLE_BOOL_TRA,
+                                               num_workers = NUM_WORKERS_TRA,
+                                               drop_last = DROP_LAST_TRA,)
+    val_data = Data.TensorDataset(x_val, y_val)
+    val_loader = torch.utils.data.DataLoader(dataset = val_data,
+                                             batch_size = BATCH_SIZE_VAL,
+                                             shuffle = SHUFFLE_BOOL_VAL,
+                                             num_workers = NUM_WORKERS_VAL,
+                                             drop_last = DROP_LAST_VAL,)
+    if isBatchTes:
+        test_data = Data.TensorDataset(x_test, y_test)
+        test_loader = torch.utils.data.DataLoader(dataset=test_data,
+                                             batch_size=BATCH_SIZE_TES,
+                                             shuffle=SHUFFLE_BOOL_TES,
+                                             num_workers=NUM_WORKERS_TES,
+                                             drop_last=DROP_LAST_TES,)
+        return train_loader, val_loader, test_loader
+    else:
+        return train_loader, val_loader, (x_test,y_test)
 
 
 # model
