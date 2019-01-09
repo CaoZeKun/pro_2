@@ -5,12 +5,184 @@ import time
 import copy
 import torch.utils.data as Data
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 
 # data processing
-def data_processing():
-    pass
+def data_read_csv(isColumnName,Path_file):
+    """
+    目的：返回列名，以便选取特征和标签 (未考虑特征列名有重复)
+    :param isColumnName: 数据文件是否有列名
+    :param Path_file: 数据文件地址
+    :return: 文件有列名：返回 列名与下标字典 key_index，列名df.iloc[0, :]，行数 df.shape[0]-1，列数df.shape[1]
+             文件无列名：返回 行数 df.shape[0]，列数df.shape[1]
+    """
+
+    # 存在列名
+    if isColumnName:
+        df = pd.read_csv(Path_file, header=None)
+        # key_index = {df.iloc[0,i]: i for i in range(df.shape[1])}
+        key_index = {df.iat[0, i]: i for i in range(df.shape[1])}
+        return key_index, df.iloc[0, :], (df.shape[0]-1), df.shape[1],
+
+    # 不存在列名
+    else:
+        df = pd.read_csv(Path_file, header=None)
+        return df.shape[0], df.shape[1]
+
+
+def receive_read_data(isColumnName,*args):
+    if isColumnName:
+        key_index = args[0][0]  # key_index
+        column_name = args[0][1]  # df.iloc[0, :]
+        row_numeber = args[0][2]  # (df.shape[0]-1)
+        column_number =args[0][3]  # df.shape[1]
+
+    else:
+        row_numeber = args[0][0]  # df.shape[0]
+        column_number = args[0][1]  # df.shape[1]
+        print(row_numeber,column_number)
+
+
+def data_processing(dataFrame,isColumnName,*args,**kwargs):
+    """
+    目的，根据用户选择，选取特征和标签
+           ********* Test  Class*********
+     case1
+    # dataFram = pd.read_csv('../data/iris1.data',header=None,)
+    # key_index = {dataFram.iat[0, i]: i for i in range(dataFram.shape[1])}
+    # print(key_index)
+    # isColumnName = True
+    case1 test 1
+    # data, k_fea = data_processing(dataFram,isColumnName, key_index = key_index)
+
+    case1 test2
+    # args = ['lab']
+    # data, k_fea = data_processing(dataFram,isColumnName, args, key_index =key_index)
+
+    case1 test3
+    # args = ['lab'],['fea0','fea1']
+    # data, k_fea = data_processing(dataFram, isColumnName, args, key_index =key_index)
+
+    case1 test4
+    # args = ['lab'],['fea0','fea1'],12
+    # data, k_fea = data_processing(dataFram, isColumnName, args, key_index=key_index)
+
+     case2
+    # dataFram = pd.read_csv('../data/iris.data',header=None,)
+    # isColumnName = False
+    case2 test 1
+    # data, k_fea = data_processing(dataFram,isColumnName, )
+
+    case2 test2
+    # args = [4]
+    # data, k_fea = data_processing(dataFram, isColumnName, args)
+
+    case2 test3
+    # args = [4],[0,1]
+    # data, k_fea = data_processing(dataFram, isColumnName, args)
+
+    case2 test4
+    # args = 'lab',['fea0','fea1'],12
+    # data, k_fea = data_processing(dataFram, isColumnName, args)
+
+    # data_y, pred_y = rnn.Flow(
+    #                         data=data, Seq=1, window_size=1, K_fea=k_fea, HIDDEN_SIZE=20, OUTPUT_SIZE=2, PATH=path,
+    #                         num_epochs=20, LR=0.01,isClassfier=True, MODEL='LSTM', BATCH_SIZE_TRA=4, BATCH_SIZE_VAL=1,
+    #                         BATCH_SIZE_TES=1)
+
+     ************* Test  Regression *************
+    case1
+    # data_csv = pd.read_csv('../data/data.csv', usecols=[1])
+    # dataFram = pd.read_csv('../data/iris1.data',header=None)
+    # key_index = {dataFram.iat[0, i]: i for i in range(dataFram.shape[1])}
+    # print(key_index)
+    # isColumnName = True
+    case1 test 1
+    # data, k_fea = data_processing(dataFram,isColumnName, key_index = key_index)
+
+    case1 test2
+    # args = ['lab']
+    # data, k_fea = data_processing(dataFram,isColumnName, args, key_index =key_index)
+
+    case1 test3
+    # args = ['lab'],['fea0','fea1']
+    # data, k_fea = data_processing(dataFram, isColumnName, args, key_index =key_index)
+
+    case1 test4
+    # args = ['lab'],['fea0','fea1'],12
+    # data, k_fea = data_processing(dataFram, isColumnName, args, key_index=key_index)
+
+    case2
+    dataFram = pd.read_csv('../data/iris.data', header=None, )
+    isColumnName = False
+    case2 test 1
+    # data, k_fea = data_processing(dataFram, isColumnName, )
+
+    case2 test2
+    # args = [4]
+    # data, k_fea = data_processing(dataFram, isColumnName, args)
+
+    case2 test3
+    # args = [4],[0,1]
+    # data, k_fea = data_processing(dataFram, isColumnName, args)
+
+    case2 test4
+    # args = 'lab',['fea0','fea1'],12
+    # data, k_fea = data_processing(dataFram, isColumnName, args)
+
+    :param dataFrame: 传入之前pandas读文件的DataFram，原因在于文件较大时，重新读入文件，浪费时间。
+                       | 也可重新读 dataFrame = pd.readcsv(...)，需重新构建key_index。
+    :param key_index: 存储列名与下标字典 key_index
+    :param isColumnName:  文件是否有列名
+    :param args: 若用户未选择，args为空，则默认最后一列为label，其它列为特征。
+                 若用户选择只选择某列当标签，应该传入 一个存有标签列名/索引的包含一个元素的list e.g. [2]
+                若用户选择某列为标签，某些列为特征，应该传入 一个存有标签列名/索引的list，和一个存有特征列名/索引的列表list
+    :return: 元组(特征 np.array(x), 标签 np.array(y)), 特征列数x.shape[1]
+    """
+    # 存在列名，用户返回应是列名，再寻找索引
+    if isColumnName :
+        if len(args) == 0:
+            x = dataFrame.iloc[1:,:-1]
+            y = dataFrame.iloc[1:,-1]
+            return (np.array(x), np.array(y)),x.shape[1]
+        elif len(args[0]) == 1:
+            key_index = kwargs['key_index']
+            # print(args[0])
+            index_clo = key_index[args[0][0]]
+            y = dataFrame.iloc[1:, index_clo]
+            x = pd.concat((dataFrame.iloc[1:,:index_clo],dataFrame.iloc[1:,(index_clo+1):]),axis=1)
+            return (np.array(x), np.array(y)),x.shape[1]
+        elif len(args[0]) == 2:
+            key_index = kwargs['key_index']
+            index_y = key_index[args[0][0][0]]
+            index_x = [key_index[i] for i in args[0][1]]
+            y = dataFrame.iloc[1:,index_y]
+            x = pd.concat((dataFrame.iloc[1:,i] for i in index_x),axis=1)
+            return (np.array(x), np.array(y)),x.shape[1]
+        else:
+            assert len(args[0]) < 3, 'args,传入参数，应该小于3'
+
+    # 不存在列名，用户返回应是索引
+    else:
+        if len(args) == 0:
+            x = dataFrame.iloc[:,:-1]
+            y = dataFrame.iloc[:,-1]
+            return (np.array(x), np.array(y)),x.shape[1]
+        elif len(args[0]) == 1:
+            index_clo = args[0][0]
+            y = dataFrame.iloc[:, index_clo]
+            x = pd.concat((dataFrame.iloc[:,:index_clo],dataFrame.iloc[:,(index_clo+1):]),axis=1)
+            return (np.array(x), np.array(y)),x.shape[1]
+        elif len(args[0]) == 2:
+            index_y = args[0][0][0]
+            index_x = args[0][1]
+            y = dataFrame.iloc[:, index_y]
+            x = pd.concat((dataFrame.iloc[:, i] for i in index_x), axis=1)
+            return (np.array(x), np.array(y)),x.shape[1]
+        else:
+            assert len(args[0]) < 3, 'args,传入参数，应该小于3'
 
 
 def create_dataset(data_x, data_y, window_size=2):
@@ -35,111 +207,6 @@ def create_dataset(data_x, data_y, window_size=2):
     return np.array(dataX), np.array(dataY)
 
 # data loader
-def load_data_loader1(data,k_fea=1,k_train=0.7,k_val=0.2,window_size=2,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1,
-                     SHUFFLE_BOOL_TRA=False,SHUFFLE_BOOL_VAL=False,SHUFFLE_BOOL_TES=False,NUM_WORKERS_TRA=0,NUM_WORKERS_VAL=0,
-                     NUM_WORKERS_TES=0,isClassfier=True,isBatchTes=False,DROP_LAST_TRA=False,DROP_LAST_VAL=False,DROP_LAST_TES=False):
-    """
-    目的：装载训练/验证/测试数据
-    :param data: 数据
-    :param k_fea: 特征的列数，默认：1
-    :param k_train: 训练集所占比例，默认：0.7
-    :param k_val: 验证集所占比例，默认：0.2
-    :param window_size: 窗口大小
-    :param BATCH_SIZE_TRA: 训练集批处理量，默认：1
-    :param BATCH_SIZE_VAL: 验证集批处理量，默认：1
-    :param BATCH_SIZE_TES: 测试集批处理量，默认：1
-    :param SHUFFLE_BOOL_TRA: 训练集是否打乱，默认：False （不打乱）
-    :param SHUFFLE_BOOL_VAL: 验证集是否打乱，默认：False （不打乱）
-    :param SHUFFLE_BOOL_TES: 测试集是否打乱，默认：False （不打乱）
-    :param NUM_WORKERS_TRA:  训练集中用于数据加载的子进程数，默认：0
-    :param NUM_WORKERS_VAL: 验证集中用于数据加载的子进程数，默认：0
-    :param NUM_WORKERS_TES: 测试集中用于数据加载的子进程数，默认：0
-    :param DROP_LAST_TRA: 是否丢弃训练集最后一组不够一个批量的样本，默认False
-    :param DROP_LAST_VAL: 是否丢弃验证集最后一组不够一个批量的样本，默认False
-    :param DROP_LAST_TES: 是否丢弃测试集最后一组不够一个批量的样本，默认False
-    :param isClassfier: 是否为分类，默认：True
-    :param isBatchTes: 测试集是否使用Batch， 默认: False
-    :return: isBatchTes为True 返回 训练数据装载器 train_loader, 验证数据装载器 val_loader, 测试数据装载器 test_loader
-             isBatchTes为False 返回 训练数据装载器 train_loader, 验证数据装载器 val_loader, 测试数据元组(x_test,y_test) (测试集特征，测试集真实值)
-    """
-    # k_fea(特征所在最后一列的索引)
-    data_length = len(data)
-    train_size = int(data_length * k_train)
-    val_size = int(data_length * k_val)
-    test_size = data_length - val_size
-    # data = np.array(data)
-
-    x_train = np.array(data[:train_size, :k_fea])
-    y_train = np.array(data[:train_size, k_fea])
-
-    x_val = np.array(data[train_size:(train_size + val_size), :k_fea])
-    y_val = np.array(data[train_size:(train_size + val_size), k_fea])
-
-    x_test = np.array(data[(train_size + val_size):, :k_fea])
-    y_test = np.array(data[(train_size + val_size):, k_fea])
-
-    x_train, y_train = create_dataset(x_train, y_train, window_size=window_size)
-    # print(np.shape(x_train))
-    x_val, y_val = create_dataset(x_val, y_val, window_size=window_size)
-    x_test, y_test = create_dataset(x_test, y_test, window_size=window_size)
-
-
-    if isClassfier:
-        x_train = torch.FloatTensor(x_train)
-        y_train = torch.LongTensor(y_train)
-
-        x_val = torch.FloatTensor(x_val)
-        y_val = torch.LongTensor(y_val)
-
-        x_test = torch.FloatTensor(x_test)
-        y_test = torch.LongTensor(y_test)
-        # if LOSSNAME == 'MSELoss':
-        #     x_train = torch.FloatTensor(np.array(data[:int(k_train * data_length), :k_fea]))
-        #     y_train = torch.FloatTensor(np.array(data[:int(k_train * data_length), k_fea]))
-        #
-        #     x_val = torch.FloatTensor(np.array(data[int(k_train * data_length):, :k_fea]))
-        #     y_val = torch.FloatTensor(np.array(data[int(k_train * data_length):, k_fea]))
-        #
-        # else:
-        #     x_train = torch.FloatTensor(np.array(data[:int(k_train * data_length), :k_fea]))
-        #     y_train = torch.LongTensor(np.array(data[:int(k_train * data_length), k_fea]))
-        #
-        #     x_val = torch.FloatTensor(np.array(data[int(k_train * data_length):, :k_fea]))
-        #     y_val = torch.LongTensor(np.array(data[int(k_train * data_length):, k_fea]))
-    else:
-        x_train = torch.FloatTensor(x_train)
-        y_train = torch.FloatTensor(y_train)
-
-        x_val = torch.FloatTensor(x_val)
-        y_val = torch.FloatTensor(y_val)
-
-        x_test = torch.FloatTensor(x_test)
-        y_test = torch.FloatTensor(y_test)
-
-
-    train_data = Data.TensorDataset(x_train, y_train)
-    train_loader = torch.utils.data.DataLoader(dataset = train_data,
-                                               batch_size = BATCH_SIZE_TRA,
-                                               shuffle = SHUFFLE_BOOL_TRA,
-                                               num_workers = NUM_WORKERS_TRA,
-                                               drop_last = DROP_LAST_TRA,)
-    val_data = Data.TensorDataset(x_val, y_val)
-    val_loader = torch.utils.data.DataLoader(dataset = val_data,
-                                             batch_size = BATCH_SIZE_VAL,
-                                             shuffle = SHUFFLE_BOOL_VAL,
-                                             num_workers = NUM_WORKERS_VAL,
-                                             drop_last = DROP_LAST_VAL,)
-    if isBatchTes:
-        test_data = Data.TensorDataset(x_test, y_test)
-        test_loader = torch.utils.data.DataLoader(dataset=test_data,
-                                             batch_size=BATCH_SIZE_TES,
-                                             shuffle=SHUFFLE_BOOL_TES,
-                                             num_workers=NUM_WORKERS_TES,
-                                             drop_last=DROP_LAST_TES,)
-        return train_loader, val_loader, test_loader
-    else:
-        return train_loader, val_loader, (x_test,y_test)
-
 def load_data_loader(data,k_fea=1,k_train=0.7,k_val=0.2,window_size=2,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1,
                      SHUFFLE_BOOL_TRA=False,SHUFFLE_BOOL_VAL=False,SHUFFLE_BOOL_TES=False,NUM_WORKERS_TRA=0,NUM_WORKERS_VAL=0,
                      NUM_WORKERS_TES=0,isClassfier=True,isBatchTes=False,DROP_LAST_TRA=False,DROP_LAST_VAL=False,DROP_LAST_TES=False):
@@ -346,7 +413,6 @@ class LSTM(nn.Module):
 
         # return out
         return out
-
 
 
 def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',WEIGHT_DECAY=0,
@@ -627,22 +693,102 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1,CU
 
 
 if __name__ =='__main__':
-    # load data | construct model | train | save
-    data = np.loadtxt('../data/iris.data',delimiter=',')  # two class
-    # print(np.shape(data))
-    # path0 = '/model_save/model_params.pkl'
-    # path1 = '/model_save/model_params.pkl'
     path = './model_save/model_params.pkl'
-    data_test = data[:,:4]
 
-    data_y, pred_y = Flow(data=data,Seq=1,window_size=1, K_fea=4,HIDDEN_SIZE=20,OUTPUT_SIZE=2,PATH=path,num_epochs=10,LR=0.1,
-                          isClassfier=True,MODEL='LSTM',BATCH_SIZE_TRA=4,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1)
+    """         *** Test  Class***         """
+    """ case1 """
+    # dataFram = pd.read_csv('../data/iris1.data',header=None,)
+    # key_index = {dataFram.iat[0, i]: i for i in range(dataFram.shape[1])}
+    # print(key_index)
+    # isColumnName = True
+    """case1 test 1"""
+    # data, k_fea = data_processing(dataFram,isColumnName, key_index = key_index)
 
-    """load model | predict/test"""
-    # data_test should only have feature
-    # data_y, pred_y = load_model_test(path,data_test,isClassfier=True,Seq=1,K_fea=4)
-    print(pred_y)
-    print(data[:,4])
+    """case1 test2"""
+    # args = ['lab']
+    # data, k_fea = data_processing(dataFram,isColumnName, args, key_index =key_index)
+
+    """case1 test3"""
+    # args = ['lab'],['fea0','fea1']
+    # data, k_fea = data_processing(dataFram, isColumnName, args, key_index =key_index)
+
+    """case1 test4"""
+    # args = ['lab'],['fea0','fea1'],12
+    # data, k_fea = data_processing(dataFram, isColumnName, args, key_index=key_index)
+
+    """ case2 """
+    # dataFram = pd.read_csv('../data/iris.data',header=None,)
+    # isColumnName = False
+    # """case2 test 1"""
+    # data, k_fea = data_processing(dataFram,isColumnName, )
+
+    """case2 test2"""
+    # args = [4]
+    # data, k_fea = data_processing(dataFram, isColumnName, args)
+
+    """case2 test3"""
+    # args = [4],[0,1]
+    # data, k_fea = data_processing(dataFram, isColumnName, args)
+
+    """case2 test4"""
+    # args = 'lab',['fea0','fea1'],12
+    # data, k_fea = data_processing(dataFram, isColumnName, args)
+
+    # data_y, pred_y = Flow(
+    #                         data=data, Seq=1, window_size=1, K_fea=k_fea, HIDDEN_SIZE=20, OUTPUT_SIZE=2, PATH=path,
+    #                         num_epochs=20, LR=0.01,isClassfier=True, MODEL='LSTM', BATCH_SIZE_TRA=4, BATCH_SIZE_VAL=1,
+    #                         BATCH_SIZE_TES=1)
+
+    """       ************* Test  Regression *************        """
+    """ case1 """
+    # data_csv = pd.read_csv('../data/data.csv', usecols=[1])
+    # dataFram = pd.read_csv('../data/iris1.data',header=None)
+    # key_index = {dataFram.iat[0, i]: i for i in range(dataFram.shape[1])}
+    # print(key_index)
+    # isColumnName = True
+    """case1 test 1"""
+    # data, k_fea = data_processing(dataFram,isColumnName, key_index = key_index)
+
+    """case1 test2"""
+    # args = ['lab']
+    # data, k_fea = data_processing(dataFram,isColumnName, args, key_index =key_index)
+
+    """case1 test3"""
+    # args = ['lab'],['fea0','fea1']
+    # data, k_fea = data_processing(dataFram, isColumnName, args, key_index =key_index)
+
+    """case1 test4"""
+    # args = ['lab'],['fea0','fea1'],12
+    # data, k_fea = data_processing(dataFram, isColumnName, args, key_index=key_index)
+
+    """ case2 """
+    dataFram = pd.read_csv('../data/iris.data', header=None, )
+    isColumnName = False
+    """case2 test 1"""
+    data, k_fea = data_processing(dataFram, isColumnName, )
+
+    """case2 test2"""
+    # args = [4]
+    # data, k_fea = data_processing(dataFram, isColumnName, args)
+
+    """case2 test3"""
+    # args = [4],[0,1]
+    # data, k_fea = data_processing(dataFram, isColumnName, args)
+
+    """case2 test4"""
+    # args = 'lab',['fea0','fea1'],12
+    # data, k_fea = data_processing(dataFram, isColumnName, args)
+
+    data_y, pred_y = Flow(data=data,Seq=1,window_size=2, K_fea=k_fea,HIDDEN_SIZE=20,OUTPUT_SIZE=1,PATH=path,num_epochs=20,LR=0.01,
+                          isClassfier=False,MODEL='LSTM',BATCH_SIZE_TRA=4,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1)
+
+    """ Test data_read"""
+    # res = data_read_csv(True,'../data/iris1.data')
+    # receive_read_data(True,res)
+
+    # res = data_read_csv(False, '../data/iris.data')
+    # receive_read_data(False, res)
+
 
 
 

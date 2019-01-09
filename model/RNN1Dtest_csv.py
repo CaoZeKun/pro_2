@@ -81,12 +81,14 @@ def data_processing(dataFrame,key_index,isColumnName,*args):
     :param key_index: 存储列名与下标字典 key_index
     :param isColumnName:  文件是否有列名
     :param args: 若用户未选择，args为空，则默认最后一列为label，其它列为特征。
-                 若用户选择只选择某列当标签，应该传入 标签列名/索引
+                 若用户选择只选择某列当标签，应该传入 一个list[标签列名/索引]
                 若用户选择某列为标签，某些列为特征，应该传入 标签列名/索引，和一个存有特征列名/索引的列表list
     :return: 特征 np.array(x), 标签 np.array(y)
     """
 
     # 存在列名，用户返回应是列名，再寻找索引
+    print(len(args))
+    print(type(args))
     assert len(args) < 3, 'args,传入参数，应该小于3'
     if isColumnName:
         if len(args) == 0:
@@ -94,6 +96,7 @@ def data_processing(dataFrame,key_index,isColumnName,*args):
             y = dataFrame.iloc[1:,-1]
             return np.array(x), np.array(y)
         elif len(args) == 1:
+            # print(args[0])
             index_clo = key_index[args[0]]
             y = dataFrame.iloc[1:, index_clo]
             x = pd.concat((dataFrame.iloc[1:,:index_clo],dataFrame.iloc[1:,(index_clo+1):]),axis=1)
@@ -141,12 +144,21 @@ if __name__ =='__main__':
     # path_data = '../data/iris.data'
     # data = data_read_csv(isColumnName=False,Path_file=path_data)
 
-    dataFram = pd.read_csv('../data/iris.data',header=None,)
+    dataFram = pd.read_csv('../data/iris1.data',header=None,)
     key_index = {dataFram.iat[0, i]: i for i in range(dataFram.shape[1])}
+    print(key_index)
     isColumnName = True
-    args = []
-    data = data_processing(dataFram, key_index, isColumnName, )
-    print(type(data))
+    # case1 test 1
+    # data = data_processing(dataFram, key_index, isColumnName, )
+    # case1 test2
+    args = 'lab'
+    data = data_processing(dataFram, key_index, isColumnName, args)
+    # case1 test3
+    # args = 'lab',['fea0','fea1']
+    # print(len(args))
+    # data = data_processing(dataFram, key_index, isColumnName, args)
+    # print(data[0][0])
+
 
     data_y, pred_y = rnn.Flow(data=data,Seq=1,window_size=1, K_fea=4,HIDDEN_SIZE=20,OUTPUT_SIZE=2,PATH=path,num_epochs=10,LR=0.1,
                           isClassfier=True,MODEL='LSTM',BATCH_SIZE_TRA=4,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1)
