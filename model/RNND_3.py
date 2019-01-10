@@ -10,25 +10,34 @@ import matplotlib.pyplot as plt
 
 
 # data processing
-def data_read_csv(isColumnName,Path_file):
+def data_read_csv(Path_file):
+    """
+    目的：读取文件
+    :param Path_file: :数据文件地址
+    :return: 返回dataFrame
+    """
+    df = pd.read_csv(Path_file, header=None)
+    return df
+
+def data_return(isColumnName,df):
     """
     目的：返回列名，以便选取特征和标签 (未考虑特征列名有重复)
     :param isColumnName: 数据文件是否有列名
-    :param Path_file: 数据文件地址
+    :param df: dataFrame
     :return: 文件有列名：返回 列名与下标字典 key_index，列名df.iloc[0, :]，行数 df.shape[0]-1，列数df.shape[1]
              文件无列名：返回 行数 df.shape[0]，列数df.shape[1]
     """
 
     # 存在列名
     if isColumnName:
-        df = pd.read_csv(Path_file, header=None)
+        # df = pd.read_csv(Path_file, header=None)
         # key_index = {df.iloc[0,i]: i for i in range(df.shape[1])}
         key_index = {df.iat[0, i]: i for i in range(df.shape[1])}
         return key_index, df.iloc[0, :], (df.shape[0]-1), df.shape[1],
 
     # 不存在列名
     else:
-        df = pd.read_csv(Path_file, header=None)
+        # df = pd.read_csv(Path_file, header=None)
         return df.shape[0], df.shape[1]
 
 
@@ -140,6 +149,7 @@ def data_processing(dataFrame,isColumnName,*args,**kwargs):
                  若用户选择只选择某列当标签，应该传入 一个存有标签列名/索引的包含一个元素的list e.g. [2]
                 若用户选择某列为标签，某些列为特征，应该传入 一个存有标签列名/索引的list，和一个存有特征列名/索引的列表list
     :return: 元组(特征 np.array(x), 标签 np.array(y)), 特征列数x.shape[1]
+              若输入有误，则报错。
     """
     # 存在列名，用户返回应是列名，再寻找索引
     if isColumnName :
@@ -697,12 +707,11 @@ if __name__ =='__main__':
 
     """         *** Test  Class***         """
     """ case1 """
-    # dataFram = pd.read_csv('../data/iris1.data',header=None,)
-    # key_index = {dataFram.iat[0, i]: i for i in range(dataFram.shape[1])}
-    # print(key_index)
-    # isColumnName = True
+    dataFram = pd.read_csv('../data/iris1.data',header=None,)
+    key_index = {dataFram.iat[0, i]: i for i in range(dataFram.shape[1])}
+    isColumnName = True
     """case1 test 1"""
-    # data, k_fea = data_processing(dataFram,isColumnName, key_index = key_index)
+    data, k_fea = data_processing(dataFram,isColumnName, key_index = key_index)
 
     """case1 test2"""
     # args = ['lab']
@@ -734,15 +743,15 @@ if __name__ =='__main__':
     # args = 'lab',['fea0','fea1'],12
     # data, k_fea = data_processing(dataFram, isColumnName, args)
 
-    # data_y, pred_y = Flow(
-    #                         data=data, Seq=1, window_size=1, K_fea=k_fea, HIDDEN_SIZE=20, OUTPUT_SIZE=2, PATH=path,
-    #                         num_epochs=20, LR=0.01,isClassfier=True, MODEL='LSTM', BATCH_SIZE_TRA=4, BATCH_SIZE_VAL=1,
-    #                         BATCH_SIZE_TES=1)
+    data_y, pred_y = Flow(
+                            data=data, Seq=1, window_size=1, K_fea=k_fea, HIDDEN_SIZE=20, OUTPUT_SIZE=2, PATH=path,
+                            num_epochs=10, LR=0.1,isClassfier=True, MODEL='LSTM', BATCH_SIZE_TRA=4, BATCH_SIZE_VAL=1,
+                            BATCH_SIZE_TES=1)
 
     """       ************* Test  Regression *************        """
     """ case1 """
     # data_csv = pd.read_csv('../data/data.csv', usecols=[1])
-    # dataFram = pd.read_csv('../data/iris1.data',header=None)
+    # dataFram = data_read_csv('../data/iris1.data')
     # key_index = {dataFram.iat[0, i]: i for i in range(dataFram.shape[1])}
     # print(key_index)
     # isColumnName = True
@@ -762,10 +771,10 @@ if __name__ =='__main__':
     # data, k_fea = data_processing(dataFram, isColumnName, args, key_index=key_index)
 
     """ case2 """
-    dataFram = pd.read_csv('../data/iris.data', header=None, )
-    isColumnName = False
+    # dataFram = data_read_csv('../data/iris.data')
+    # isColumnName = False
     """case2 test 1"""
-    data, k_fea = data_processing(dataFram, isColumnName, )
+    # data, k_fea = data_processing(dataFram, isColumnName, )
 
     """case2 test2"""
     # args = [4]
@@ -779,14 +788,19 @@ if __name__ =='__main__':
     # args = 'lab',['fea0','fea1'],12
     # data, k_fea = data_processing(dataFram, isColumnName, args)
 
-    data_y, pred_y = Flow(data=data,Seq=1,window_size=2, K_fea=k_fea,HIDDEN_SIZE=20,OUTPUT_SIZE=1,PATH=path,num_epochs=20,LR=0.01,
-                          isClassfier=False,MODEL='LSTM',BATCH_SIZE_TRA=4,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1)
+    # data_y, pred_y = Flow(data=data,Seq=1,window_size=2, K_fea=k_fea,HIDDEN_SIZE=20,OUTPUT_SIZE=1,PATH=path,num_epochs=10,LR=0.1,
+    #                       isClassfier=False,MODEL='LSTM',BATCH_SIZE_TRA=4,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1)
 
     """ Test data_read"""
-    # res = data_read_csv(True,'../data/iris1.data')
-    # receive_read_data(True,res)
 
-    # res = data_read_csv(False, '../data/iris.data')
+    # df = data_read_csv('../data/iris1.data')
+    # isColumnName = True
+    # res = data_return(isColumnName,df)
+    # receive_read_data(isColumnName,res)
+
+    # df = data_read_csv('../data/iris.data')
+    # isColumnName = False
+    # res = data_return(isColumnName,df)
     # receive_read_data(False, res)
 
 
