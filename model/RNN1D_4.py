@@ -1,4 +1,5 @@
-"""input should be data_x, data_y， and batch not trans its hidden_state to next one"""
+"""input should be data_x, data_y"""
+""" RNN/LSTM 传入 需要batch 匹配，应舍弃最后一个不成批的batch"""
 import torch
 from torch import nn
 import time
@@ -219,7 +220,7 @@ def create_dataset(data_x, data_y, window_size=2):
 # data loader
 def load_data_loader(data,k_fea=1,k_train=0.7,k_val=0.2,window_size=2,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1,
                      SHUFFLE_BOOL_TRA=False,SHUFFLE_BOOL_VAL=False,SHUFFLE_BOOL_TES=False,NUM_WORKERS_TRA=0,NUM_WORKERS_VAL=0,
-                     NUM_WORKERS_TES=0,isClassfier=True,isBatchTes=False,DROP_LAST_TRA=False,DROP_LAST_VAL=False,DROP_LAST_TES=False):
+                     NUM_WORKERS_TES=0,isClassfier=True,isBatchTes=False,DROP_LAST_TRA=True,DROP_LAST_VAL=True,DROP_LAST_TES=True):
     """
     目的：装载训练/验证/测试数据
     :param data: 数据(元组 （x, y）)
@@ -236,9 +237,9 @@ def load_data_loader(data,k_fea=1,k_train=0.7,k_val=0.2,window_size=2,BATCH_SIZE
     :param NUM_WORKERS_TRA:  训练集中用于数据加载的子进程数，默认：0
     :param NUM_WORKERS_VAL: 验证集中用于数据加载的子进程数，默认：0
     :param NUM_WORKERS_TES: 测试集中用于数据加载的子进程数，默认：0
-    :param DROP_LAST_TRA: 是否丢弃训练集最后一组不够一个批量的样本，默认False
-    :param DROP_LAST_VAL: 是否丢弃验证集最后一组不够一个批量的样本，默认False
-    :param DROP_LAST_TES: 是否丢弃测试集最后一组不够一个批量的样本，默认False
+    :param DROP_LAST_TRA: 是否丢弃训练集最后一组不够一个批量的样本，默认True
+    :param DROP_LAST_VAL: 是否丢弃验证集最后一组不够一个批量的样本，默认True
+    :param DROP_LAST_TES: 是否丢弃测试集最后一组不够一个批量的样本，默认True
     :param isClassfier: 是否为分类，默认：True
     :param isBatchTes: 测试集是否使用Batch， 默认: False
     :return: isBatchTes为True 返回 训练数据装载器 train_loader, 验证数据装载器 val_loader, 测试数据装载器 test_loader
@@ -358,7 +359,7 @@ class RNN(nn.Module):
         self.out = nn.Linear(HIDDEN_SIZE,OUTPUT_SIZE,bias=BIAS_RNN_BOOL)
 
     # def forward(self,x,h_state):
-    def forward(self, x):
+    def forward(self, x, h):
         """
         目的：前向传播
         :param x: 输入数据维度，BATCH_FIRST 为 True，(batch, seq, input_size)
@@ -367,12 +368,12 @@ class RNN(nn.Module):
         # x (batch, seq , feature)
         # h_state (num_layers * num_directions, batch, hidden_size)
         # r_out (batch, seq , num_directions * hidden_size)
-        r_out, h_state = self.rnn(x)
+        r_out, h_state = self.rnn(x,h)
         # choose r_out at the last time step
         out = self.out(r_out[:,-1,:])
 
         # return out, h_state
-        return out
+        return out, h_state
 
 
 # LSTM
@@ -404,7 +405,7 @@ class LSTM(nn.Module):
 
 
     # def forward(self,x,h_state):
-    def forward(self, x):
+    def forward(self, x, h):
         """
         目的：LSTM模型前向传播
         :param x: 输入数据维度，BATCH_FIRST 为 True，(batch, seq, input_size)
@@ -413,7 +414,7 @@ class LSTM(nn.Module):
         # x (batch, seq , feature)
         # h_state (num_layers * num_directions, batch, hidden_size)
         # r_out (batch, seq , num_directions * hidden_size)
-        r_out, (h_n, h_c) = self.lstm(x)
+        r_out, h_n = self.lstm(x,h)
         # print(r_out.size())
         # print(r_out[:,-1,:].size())
         # choose r_out at the last time step
@@ -422,7 +423,7 @@ class LSTM(nn.Module):
         # print(out.size())
 
         # return out
-        return out
+        return out, h_n
 
 
 def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',WEIGHT_DECAY=0,
@@ -485,7 +486,7 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
 
 # train
 def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_size,num_epochs=1,CUDA_ID="0",
-                isClassfier=True,K_fea=1,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,):
+                isClassfier=True,K_fea=1,model_name ='LSTM',BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,):
     """
     目的：训练模型
     :param model: 模型
@@ -499,6 +500,7 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_si
     :param CUDA_ID: GPU ID号，默认：0
     :param isClassfier: 是否分类，默认：True
     :param K_fea: 特征的列数，默认：1
+    :param model_name: RNN， LSTM需要设计不同传入， 默认'RNN'
     :param BATCH_SIZE_TRA: 训练集批处理量，默认：1
     :param BATCH_SIZE_VAL: 验证集批处理量，默认：1
     :return: 无返回值，保存最优模型
@@ -518,71 +520,147 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_si
     primary_best_acc = 0.0
     primary_lowest_loss = 100.0
 
-    for epoch in range(num_epochs):
-        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
-        print('-' * 10)
+    if model_name == 'RNN':
+        for epoch in range(num_epochs):
+            print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+            print('-' * 10)
 
-        model.train()
-        running_loss = 0.0
-        running_corrects = 0
-        running_loss1 = 0.0
-        running_corrects1 = 0
-        # h_state = 0
-        for step_0, (train_x, train_y) in enumerate(train_loader):
-            # print(train_x.size())
-            train_x = train_x.view(-1,window_size,K_fea)
-            # print(train_x.size())
-            # print(train_y.size())
-            # output_tra, h_state= model(train_x,h_state) #  output
-            output_tra = model(train_x)  # output
-            # print(output_tra.size())
-            # h_state = h_state.data
-            loss_tra = criterion(output_tra, train_y)
-            optimizer.zero_grad()  # clear gradients for this training step
-            loss_tra.backward()  # backpropagation, compute gradients
-            optimizer.step()  # apply gradients
+            model.train()
+            running_loss = 0.0
+            running_corrects = 0
 
-            _, tra_preds = torch.max(output_tra, 1)
-            running_loss += loss_tra.item() * train_x.size(0)
+            running_loss1 = 0.0
+            running_corrects1 = 0
+
+            h_state = None
+            for step_0, (train_x, train_y) in enumerate(train_loader):
+                # print(train_x.size())
+                train_x = train_x.view(-1, window_size, K_fea)
+                # print(train_x.size())
+                # print(train_y.size())
+                # output_tra, h_state= model(train_x,h_state) #  output
+                output_tra, h_state = model(train_x, h_state)  # output
+                # print(output_tra.size())
+                h_state = h_state.data
+                loss_tra = criterion(output_tra, train_y)
+                optimizer.zero_grad()  # clear gradients for this training step
+                loss_tra.backward()  # backpropagation, compute gradients
+                optimizer.step()  # apply gradients
+
+                _, tra_preds = torch.max(output_tra, 1)
+                running_loss += loss_tra.item() * train_x.size(0)
+                if isClassfier:
+                    running_corrects += torch.sum(tra_preds == train_y.data)
+
+            epoch_tra_loss = running_loss / len(train_loader.dataset)
             if isClassfier:
-                running_corrects += torch.sum(tra_preds == train_y.data)
-
-        epoch_tra_loss = running_loss / len(train_loader.dataset)
-        if isClassfier:
-            epoch_tra_acc = running_corrects.double() / len(train_loader.dataset)
-            print('Train Loss: {:.4f} Acc: {:.4f}'.format(epoch_tra_loss, epoch_tra_acc))
-        else:
-            print('Train Loss: {:.4f} '.format(epoch_tra_loss))
+                epoch_tra_acc = running_corrects.double() / len(train_loader.dataset)
+                print('Train Loss: {:.4f} Acc: {:.4f}'.format(epoch_tra_loss, epoch_tra_acc))
+            else:
+                print('Train Loss: {:.4f} '.format(epoch_tra_loss))
 
 
-        h_state = 0
-        model.eval()
-        for step_1, (val_x, val_y) in enumerate(val_loader):
+            h_state1 = None
+            model.eval()
+            for step_1, (val_x, val_y) in enumerate(val_loader):
 
-            val_x = val_x.view(-1, window_size, K_fea)
-            # output_val = model(val_x,h_state) #  output
-            output_val = model(val_x)  # output
-            loss = criterion(output_val, val_y)  # cross entropy loss
+                val_x = val_x.view(-1, window_size, K_fea)
+                # output_val = model(val_x,h_state) #  output
+                output_val, _ = model(val_x, h_state1)  # output
+                loss = criterion(output_val, val_y)  # cross entropy loss
 
-            _, val_preds = torch.max(output_val, 1)
-            running_loss1 += loss.item() * val_x.size(0)
+                _, val_preds = torch.max(output_val, 1)
+                running_loss1 += loss.item() * val_x.size(0)
+                if isClassfier:
+
+                    running_corrects1 += torch.sum(val_preds == val_y.data)
+
+            epoch_val_loss = running_loss1 / len(val_loader.dataset)
             if isClassfier:
-                running_corrects1 += torch.sum(val_preds == val_y.data)
+                epoch_val_acc = running_corrects1.double() / len(val_loader.dataset)
+                print('Val Loss: {:.4f} Acc: {:.4f}'.format(epoch_val_loss, epoch_val_acc))
+                # deep copy the model
+                if epoch_val_acc > best_acc:
+                    best_acc = epoch_val_acc
+                    best_model_wts = copy.deepcopy(model.state_dict())
+                val_acc_history.append(epoch_val_acc)
+            else:
+                if epoch_val_loss < lowest_loss:
+                    lowest_loss = epoch_val_loss
+                    best_model_wts = copy.deepcopy(model.state_dict())
+                print('Val Loss: {:.4f} '.format(epoch_val_loss))
 
-        epoch_val_loss = running_loss1 / len(val_loader.dataset)
-        if isClassfier:
-            epoch_val_acc = running_corrects1.double() / len(val_loader.dataset)
-            print('Val Loss: {:.4f} Acc: {:.4f}'.format(epoch_val_loss, epoch_val_acc))
-            # deep copy the model
-            if  epoch_val_acc > best_acc:
-                best_acc = epoch_val_acc
-                best_model_wts = copy.deepcopy(model.state_dict())
-            val_acc_history.append(epoch_val_acc)
-        else:
-            if  epoch_val_loss < lowest_loss:
-                lowest_loss = epoch_val_loss
-                best_model_wts = copy.deepcopy(model.state_dict())
-            print('Val Loss: {:.4f} '.format(epoch_val_loss))
+    else:
+        for epoch in range(num_epochs):
+            print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+            print('-' * 10)
+
+            model.train()
+            running_loss = 0.0
+            running_corrects = 0
+            running_loss1 = 0.0
+            running_corrects1 = 0
+
+            h_n = None
+            for step_0, (train_x, train_y) in enumerate(train_loader):
+                # print(train_x.size())
+                train_x = train_x.view(-1, window_size, K_fea)
+                # print(train_x.size())
+                # print(train_y.size())
+                # output_tra, h_state= model(train_x,h_state) #  output
+                output_tra, h_n = model(train_x, h_n)  # output
+                # print(output_tra.size())
+                h_state = h_n[0].data
+                h_c = h_n[1].data
+                h_n = (h_state,h_c)
+                loss_tra = criterion(output_tra, train_y)
+                optimizer.zero_grad()  # clear gradients for this training step
+                loss_tra.backward()  # backpropagation, compute gradients
+                optimizer.step()  # apply gradients
+
+                _, tra_preds = torch.max(output_tra, 1)
+                running_loss += loss_tra.item() * train_x.size(0)
+                if isClassfier:
+                    running_corrects += torch.sum(tra_preds == train_y.data)
+
+            epoch_tra_loss = running_loss / len(train_loader.dataset)
+            if isClassfier:
+                epoch_tra_acc = running_corrects.double() / len(train_loader.dataset)
+                print('Train Loss: {:.4f} Acc: {:.4f}'.format(epoch_tra_loss, epoch_tra_acc))
+            else:
+                print('Train Loss: {:.4f} '.format(epoch_tra_loss))
+
+
+
+            h_state1 = None
+            model.eval()
+            for step_1, (val_x, val_y) in enumerate(val_loader):
+
+                val_x = val_x.view(-1, window_size, K_fea)
+                # output_val = model(val_x,h_state) #  output
+                output_val, _ = model(val_x, h_state1)  # output
+                loss = criterion(output_val, val_y)  # cross entropy loss
+
+                _, val_preds = torch.max(output_val, 1)
+                running_loss1 += loss.item() * val_x.size(0)
+                if isClassfier:
+                    running_corrects1 += torch.sum(val_preds == val_y.data)
+
+            epoch_val_loss = running_loss1 / len(val_loader.dataset)
+            if isClassfier:
+                epoch_val_acc = running_corrects1.double() / len(val_loader.dataset)
+                print('Val Loss: {:.4f} Acc: {:.4f}'.format(epoch_val_loss, epoch_val_acc))
+                # deep copy the model
+                if epoch_val_acc > best_acc:
+                    best_acc = epoch_val_acc
+                    best_model_wts = copy.deepcopy(model.state_dict())
+                val_acc_history.append(epoch_val_acc)
+            else:
+                if epoch_val_loss < lowest_loss:
+                    lowest_loss = epoch_val_loss
+                    best_model_wts = copy.deepcopy(model.state_dict())
+                print('Val Loss: {:.4f} '.format(epoch_val_loss))
+
 
 
     time_elapsed = time.time() - since
@@ -635,7 +713,7 @@ def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1,window_size=2, K_fea=1,k_tra
               SHUFFLE_BOOL_VAL=False, SHUFFLE_BOOL_TES=True,NUM_WORKERS_TRA=0, NUM_WORKERS_VAL=0, NUM_WORKERS_TES=0,isClassfier=isClassfier,isBatchTes=False)
     model, optimizer, criterion = construct_model_opt(K_fea, HIDDEN_SIZE, OUTPUT_SIZE, LR=LR, OPT='Adam', WEIGHT_DECAY=0,
                         LOSS_NAME=LOSS_NAME, MODEL=MODEL,isClassfier=isClassfier)
-    train_model(model, train_loader, val_loader, criterion, optimizer,PATH,window_size,num_epochs,CUDA_ID,isClassfier,K_fea=K_fea,BATCH_SIZE_TRA=BATCH_SIZE_TRA,BATCH_SIZE_VAL=BATCH_SIZE_VAL,)
+    train_model(model, train_loader, val_loader, criterion, optimizer,PATH,window_size,num_epochs,CUDA_ID,isClassfier,K_fea=K_fea,model_name=MODEL,BATCH_SIZE_TRA=BATCH_SIZE_TRA,BATCH_SIZE_VAL=BATCH_SIZE_VAL,)
 
     """For test"""
     if isBatchTes:
@@ -673,7 +751,7 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1,CU
         # data_x = torch.Tensor([])
         for step_0,(test_x, test_y) in enumerate(data):
             test_x = test_x.view(-1,Seq,K_fea)
-            output = model(test_x)
+            output, _ = model(test_x)
             # print(output.size())
             pred_y = torch.cat((pred_y,output),0)
             data_y = torch.cat((data_y, test_y), 0)
@@ -686,7 +764,8 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1,CU
 
         data_x = data_x.view(-1,Seq,K_fea)
         # print(data_x.size())
-        pred_y = model(data_x)
+        h = None
+        pred_y, _ = model(data_x, h)
 
     if isClassfier:
         _, pred_y = torch.max(pred_y, 1)
@@ -752,7 +831,7 @@ if __name__ =='__main__':
 
     data_y, pred_y = Flow(
                             data=data, Seq=1, window_size=1, K_fea=k_fea, HIDDEN_SIZE=20, OUTPUT_SIZE=2, PATH=path,
-                            num_epochs=10, LR=0.1,isClassfier=True, MODEL='LSTM', BATCH_SIZE_TRA=4, BATCH_SIZE_VAL=1,
+                            num_epochs=20, LR=0.1,isClassfier=True, MODEL='LSTM', BATCH_SIZE_TRA=4, BATCH_SIZE_VAL=1,
                             BATCH_SIZE_TES=1)
 
     """       ************* Test  Regression *************        """
