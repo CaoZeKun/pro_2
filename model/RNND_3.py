@@ -590,7 +590,7 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_si
         print('Lowest loss: {:4f}'.format(lowest_loss))
 
     # load best model weights
-    model.load_state_dict(best_model_wts)
+    model.load_state_dict(best_model_wts())
     # torch.save(the_model, PATH)
     torch.save(model, PATH)
     # return model, val_acc_history
@@ -745,7 +745,7 @@ if __name__ =='__main__':
 
     data_y, pred_y = Flow(
                             data=data, Seq=1, window_size=1, K_fea=k_fea, HIDDEN_SIZE=20, OUTPUT_SIZE=2, PATH=path,
-                            num_epochs=10, LR=0.1,isClassfier=True, MODEL='LSTM', BATCH_SIZE_TRA=4, BATCH_SIZE_VAL=1,
+                            num_epochs=20, LR=0.01,isClassfier=True, MODEL='LSTM', BATCH_SIZE_TRA=4, BATCH_SIZE_VAL=1,
                             BATCH_SIZE_TES=1)
 
     """       ************* Test  Regression *************        """
