@@ -533,9 +533,6 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_si
             running_loss = 0.0
             running_corrects = 0
 
-            running_loss1 = 0.0
-            running_corrects1 = 0
-
             h_state = None
             for step_0, (train_x, train_y) in enumerate(train_loader):
                 # print(train_x.size())
@@ -566,7 +563,8 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_si
             else:
                 print('Train Loss: {:.4f} '.format(epoch_tra_loss))
 
-
+            running_loss1 = 0.0
+            running_corrects1 = 0
             h_state1 = None
             model.eval()
             for step_1, (val_x, val_y) in enumerate(val_loader):
@@ -608,8 +606,7 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_si
             model.train()
             running_loss = 0.0
             running_corrects = 0
-            running_loss1 = 0.0
-            running_corrects1 = 0
+
 
             h_n = None
             for step_0, (train_x, train_y) in enumerate(train_loader):
@@ -644,8 +641,8 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_si
             else:
                 print('Train Loss: {:.4f} '.format(epoch_tra_loss))
 
-
-
+            running_loss1 = 0.0
+            running_corrects1 = 0
             h_state1 = None
             model.eval()
             for step_1, (val_x, val_y) in enumerate(val_loader):
@@ -856,7 +853,7 @@ if __name__ =='__main__':
     # data, k_fea = data_processing(dataFram, isColumnName, args)
 
     data_y, pred_y = Flow(
-                            data=data, Seq=1, window_size=1, K_fea=k_fea, HIDDEN_SIZE=20, OUTPUT_SIZE=2, PATH=path,
+                            data=data, Seq=1, window_size=1, K_fea=k_fea,k_train=0.5,k_val=0.3, HIDDEN_SIZE=20, OUTPUT_SIZE=2, PATH=path,
                             num_epochs=20, LR=0.01,isClassfier=True, MODEL='RNN', BATCH_SIZE_TRA=4, BATCH_SIZE_VAL=1,
                             BATCH_SIZE_TES=1,isBatchTes=False,USE_CUDA=False)
 
