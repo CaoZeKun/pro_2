@@ -144,11 +144,11 @@ def data_processing(dataFrame,isColumnName,*args,**kwargs):
 
     :param dataFrame: 传入之前pandas读文件的DataFram，原因在于文件较大时，重新读入文件，浪费时间。
                        | 也可重新读 dataFrame = pd.readcsv(...)，需重新构建key_index。
-    :param key_index: 存储列名与下标字典 key_index
     :param isColumnName:  文件是否有列名
     :param args: 若用户未选择，args为空，则默认最后一列为label，其它列为特征。
                  若用户选择只选择某列当标签，应该传入 一个存有标签列名/索引的包含一个元素的list e.g. [2]
                 若用户选择某列为标签，某些列为特征，应该传入 一个存有标签列名/索引的list，和一个存有特征列名/索引的列表list
+    :param kwargs: 应当传入的是存储列名与下标字典 key_index， 得到的是{key_index ： key_index}
     :return: 元组(特征 np.array(x), 标签 np.array(y)), 特征列数x.shape[1]
               若输入有误，则报错。
     """
@@ -173,7 +173,8 @@ def data_processing(dataFrame,isColumnName,*args,**kwargs):
             x = pd.concat((dataFrame.iloc[1:,i] for i in index_x),axis=1)
             return (np.array(x), np.array(y)),x.shape[1]
         else:
-            assert len(args[0]) < 3, 'args,传入参数，应该小于3'
+            raise ValueError("The parameters in args should lower 3, not {}".format(len(args[0])))
+
 
     # 不存在列名，用户返回应是索引
     else:
@@ -193,7 +194,7 @@ def data_processing(dataFrame,isColumnName,*args,**kwargs):
             x = pd.concat((dataFrame.iloc[:, i] for i in index_x), axis=1)
             return (np.array(x), np.array(y)),x.shape[1]
         else:
-            assert len(args[0]) < 3, 'args,传入参数，应该小于3'
+            raise ValueError("The parameters in args should lower 3, not {}".format(len(args[0])))
 
 
 def create_dataset(data_x, data_y, window_size=2):
@@ -441,26 +442,25 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
     :param isClassfier:是否为分类，默认：True
     :return: 返回 模型 model, 优化器 optimizer, 损失函数 criterion
     """
-
-    if MODEL == 'RNN':
+    if MODEL not in ['RNN', 'LSTM']:
+        raise ValueError(MODEL, "is not an available method.")
+    elif MODEL == 'RNN':
         model = RNN(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,NUM_LAYERS=1,NONLINEARITY='tanh',
                  BIAS_RNN_BOOL=True,BATCH_FIRST=True,DROPOUT_PRO=0,BIDIRECTIONAL_BOOL=False)
     # else:
     #     model = LSTM(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE, NUM_LAYERS=1, NONLINEARITY='tanh',
     #                 BIAS_RNN_BOOL=True, BATCH_FIRST=True, DROPOUT_PRO=0, BIDIRECTIONAL_BOOL=False)
-    if MODEL == 'LSTM':
+    elif MODEL == 'LSTM':
         model = LSTM(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE, NUM_LAYERS=1,BIAS_LSTM_BOOL=True,
                      BATCH_FIRST=True, DROPOUT_PRO=0, BIDIRECTIONAL_BOOL=False)
 
-
-
-    if OPT == 'Adagrad':
-        optimizer = torch.optim.Adagrad(model.parameters(),lr = LR, weight_decay=WEIGHT_DECAY)
+    if OPT not in ['Adagrad', 'SGD', 'Adam']:
+        raise ValueError(OPT, " is not  available.")
+    elif OPT == 'Adagrad':
+        optimizer = torch.optim.Adagrad(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     elif OPT == 'SGD':
         optimizer = torch.optim.SGD(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     elif OPT == 'Adam':
-        optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
-    else:
         optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 
     if isClassfier:
@@ -645,12 +645,12 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_si
                 running_loss1 += loss.item() * val_x.size(0)
                 if isClassfier:
                     running_corrects1 += torch.sum(val_preds == val_y.data)
-
+            # print(running_corrects1)
             epoch_val_loss = running_loss1 / len(val_loader.dataset)
+            # deep copy the model
             if isClassfier:
                 epoch_val_acc = running_corrects1.double() / len(val_loader.dataset)
                 print('Val Loss: {:.4f} Acc: {:.4f}'.format(epoch_val_loss, epoch_val_acc))
-                # deep copy the model
                 if epoch_val_acc > best_acc:
                     best_acc = epoch_val_acc
                     best_model_wts = copy.deepcopy(model.state_dict())
@@ -831,7 +831,7 @@ if __name__ =='__main__':
 
     data_y, pred_y = Flow(
                             data=data, Seq=1, window_size=1, K_fea=k_fea, HIDDEN_SIZE=20, OUTPUT_SIZE=2, PATH=path,
-                            num_epochs=20, LR=0.1,isClassfier=True, MODEL='LSTM', BATCH_SIZE_TRA=4, BATCH_SIZE_VAL=1,
+                            num_epochs=20, LR=0.01,isClassfier=True, MODEL='LSTM', BATCH_SIZE_TRA=4, BATCH_SIZE_VAL=1,
                             BATCH_SIZE_TES=1)
 
     """       ************* Test  Regression *************        """

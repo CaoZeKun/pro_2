@@ -141,13 +141,13 @@ def data_processing(dataFrame,isColumnName,*args,**kwargs):
     # args = 'lab',['fea0','fea1'],12
     # data, k_fea = data_processing(dataFram, isColumnName, args)
 
-    :param dataFrame: 传入之前pandas读文件的DataFram，原因在于文件较大时，重新读入文件，浪费时间。
+   :param dataFrame: 传入之前pandas读文件的DataFram，原因在于文件较大时，重新读入文件，浪费时间。
                        | 也可重新读 dataFrame = pd.readcsv(...)，需重新构建key_index。
-    :param key_index: 存储列名与下标字典 key_index
     :param isColumnName:  文件是否有列名
     :param args: 若用户未选择，args为空，则默认最后一列为label，其它列为特征。
                  若用户选择只选择某列当标签，应该传入 一个存有标签列名/索引的包含一个元素的list e.g. [2]
                 若用户选择某列为标签，某些列为特征，应该传入 一个存有标签列名/索引的list，和一个存有特征列名/索引的列表list
+    :param kwargs: 应当传入的是存储列名与下标字典 key_index， 得到的是{key_index ： key_index}
     :return: 元组(特征 np.array(x), 标签 np.array(y)), 特征列数x.shape[1]
               若输入有误，则报错。
     """
@@ -441,26 +441,28 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
     :return: 返回 模型 model, 优化器 optimizer, 损失函数 criterion
     """
 
-    if MODEL == 'RNN':
+    if MODEL not in ['RNN', 'LSTM']:
+        raise ValueError(MODEL, "is not an available method.")
+    elif MODEL == 'RNN':
         model = RNN(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,NUM_LAYERS=1,NONLINEARITY='tanh',
                  BIAS_RNN_BOOL=True,BATCH_FIRST=True,DROPOUT_PRO=0,BIDIRECTIONAL_BOOL=False)
     # else:
     #     model = LSTM(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE, NUM_LAYERS=1, NONLINEARITY='tanh',
     #                 BIAS_RNN_BOOL=True, BATCH_FIRST=True, DROPOUT_PRO=0, BIDIRECTIONAL_BOOL=False)
-    if MODEL == 'LSTM':
+    elif MODEL == 'LSTM':
         model = LSTM(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE, NUM_LAYERS=1,BIAS_LSTM_BOOL=True,
                      BATCH_FIRST=True, DROPOUT_PRO=0, BIDIRECTIONAL_BOOL=False)
 
 
-
-    if OPT == 'Adagrad':
+    if OPT not in ['Adagrad', 'SGD', 'Adam']:
+        raise ValueError(OPT, " is not  available.")
+    elif OPT == 'Adagrad':
         optimizer = torch.optim.Adagrad(model.parameters(),lr = LR, weight_decay=WEIGHT_DECAY)
     elif OPT == 'SGD':
         optimizer = torch.optim.SGD(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     elif OPT == 'Adam':
         optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
-    else:
-        optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
+
 
     if isClassfier:
         if LOSS_NAME == 'crossentropy':
