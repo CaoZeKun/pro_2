@@ -430,6 +430,10 @@ class Attn(torch.nn.Module):
         return F.softmax(attn_energies, dim=1).unsqueeze(1)
 
 
+class LuongAttnDecoderRNN(nn.Module):
+    def
+
+
 
 
 
