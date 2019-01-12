@@ -1135,7 +1135,8 @@ def trainIters(model_name, voc, pairs, encoder, decoder, encoder_optimizer, deco
 #
 
 class GreedySearchDecoder(nn.Module):
-    def __init__(self, encoder, decoder):
+    def \
+            __init__(self, encoder, decoder):
         super(GreedySearchDecoder, self).__init__()
         self.encoder = encoder
         self.decoder = decoder

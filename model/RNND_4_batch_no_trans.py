@@ -1,4 +1,3 @@
-"""input should be data_x, data_y， and batch not trans its hidden_state to next one"""
 import torch
 from torch import nn
 import time
@@ -56,7 +55,7 @@ def receive_read_data(isColumnName,*args):
 
 def data_processing(dataFrame,isColumnName,*args,**kwargs):
     """
-    目的，根据用户选择，选取特征和标签
+    目的，根据用户选择列名或下标，选取特征和标签
            ********* Test  Class*********
      case1
     # dataFram = pd.read_csv('../data/iris1.data',header=None,)
@@ -145,7 +144,7 @@ def data_processing(dataFrame,isColumnName,*args,**kwargs):
                        | 也可重新读 dataFrame = pd.readcsv(...)，需重新构建key_index。
     :param isColumnName:  文件是否有列名
     :param args: 若用户未选择，args为空，则默认最后一列为label，其它列为特征。
-                 若用户选择只选择某列当标签，应该传入 一个存有标签列名/索引的包含一个元素的list e.g. [2]
+                 若用户选择只选择某列当标签(默认余下列为特征)，应该传入 一个存有标签列名/索引的包含一个元素的list e.g. [2]
                 若用户选择某列为标签，某些列为特征，应该传入 一个存有标签列名/索引的list，和一个存有特征列名/索引的列表list
     :param kwargs: 应当传入的是存储列名与下标字典 key_index， 得到的是{key_index ： key_index}
     :return: 元组(特征 np.array(x), 标签 np.array(y)), 特征列数x.shape[1]
@@ -618,7 +617,7 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_si
 def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1,window_size=2, K_fea=1,k_train=0.7,k_val=0.2, num_epochs=1, LR=1e-3,LOSS_NAME = 'crossentropy',
          CUDA_ID="0", isClassfier=True, MODEL='RNN',isBatchTes=False,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1,USE_CUDA=False):
     """
-    目的：整体流程: 数据装载 -> 模型构建 -> 模型训练(保存)
+    目的：整体流程: 数据装载 -> 模型构建 -> 模型训练(保存) ->模型测试
     若是分类，OUTPUT_SIZE应该与标签Label类别数一致；
     若是回归，OUTPUT_SIZE应该为1
     :param data: 数据

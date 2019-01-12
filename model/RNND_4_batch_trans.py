@@ -1,5 +1,3 @@
-"""input should be data_x, data_y"""
-""" RNN/LSTM 传入 需要batch 匹配，应舍弃最后一个不成批的batch"""
 import torch
 from torch import nn
 import time
@@ -57,7 +55,7 @@ def receive_read_data(isColumnName,*args):
 
 def data_processing(dataFrame,isColumnName,*args,**kwargs):
     """
-    目的，根据用户选择，选取特征和标签
+    目的，根据用户选择列名或下标，选取特征和标签
            ********* Test  Class*********
      case1
     # dataFram = pd.read_csv('../data/iris1.data',header=None,)
@@ -146,7 +144,7 @@ def data_processing(dataFrame,isColumnName,*args,**kwargs):
                        | 也可重新读 dataFrame = pd.readcsv(...)，需重新构建key_index。
     :param isColumnName:  文件是否有列名
     :param args: 若用户未选择，args为空，则默认最后一列为label，其它列为特征。
-                 若用户选择只选择某列当标签，应该传入 一个存有标签列名/索引的包含一个元素的list e.g. [2]
+                 若用户选择只选择某列当标签(默认余下列为特征)，应该传入 一个存有标签列名/索引的包含一个元素的list e.g. [2]
                 若用户选择某列为标签，某些列为特征，应该传入 一个存有标签列名/索引的list，和一个存有特征列名/索引的列表list
     :param kwargs: 应当传入的是存储列名与下标字典 key_index， 得到的是{key_index ： key_index}
     :return: 元组(特征 np.array(x), 标签 np.array(y)), 特征列数x.shape[1]
