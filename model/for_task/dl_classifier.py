@@ -1,4 +1,4 @@
-
+import RNN1DBatchNoTrans as RNNnoTRA
 
 
 class classfier():
@@ -6,8 +6,12 @@ class classfier():
     分类模型
     """
 
+    name =  "DL Time Series classfier"
+
+    # 从解析好前端传来的数据开始
+
     def run(self, ):
-        pass
+
 
 
 
