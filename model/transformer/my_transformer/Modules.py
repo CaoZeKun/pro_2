@@ -16,8 +16,8 @@ class ScaledDotProductAttention(nn.Module):
         attn_sco_div = attn_sco / self.root_dk
 
         if mask is not None:
+            # masked_fill  Fills elements of self tensor with value where mask is one.
             attn_sco_div = attn_sco_div.masked_fill(mask, -np.inf)
-            # Fills elements of self tensor with value where mask is one.
         attn_sco_div = self.softmax(attn_sco_div)
         attn_sco_div = self.dropout(attn_sco_div)
         output = torch.bmm(attn_sco_div, v)

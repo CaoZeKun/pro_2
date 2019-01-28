@@ -1,4 +1,4 @@
-import RNN1DBatchNoTrans as RNNnoTRA
+import RNN1DBatchNoTrans as RNNNoTra
 
 
 class classfier():
