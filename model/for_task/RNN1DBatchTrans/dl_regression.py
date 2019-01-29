@@ -12,7 +12,7 @@ import pandas as pd
 
 class DLRegression():
     '''
-     RNN1DBatchNoTrans 时序性分类模型(不同批batch之间不互传)
+     RNN1DBatchTrans 时序性分类模型(不同批batch之间后传)
      回归，输出神经元个数 =1
     '''
 
