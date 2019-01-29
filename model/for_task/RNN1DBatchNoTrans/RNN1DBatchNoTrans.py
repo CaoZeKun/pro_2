@@ -750,7 +750,7 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1,CU
         # 1. simple, not many samples
         data_x = torch.Tensor(np.array(data[0]))
         data_y = data[1]
-        print(data_x.size())
+        # print(data_x.size())
         # data_x = data_x.view(-1,Seq,K_fea)
         # print(data_x.size())
         if torch.cuda.is_available() and USE_CUDA :

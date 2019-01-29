@@ -18,7 +18,6 @@ def data_read_csv(Path_file):
     df = pd.read_csv(Path_file, header=None)
     return df
 
-
 def data_return(isColumnName,df):
     """
     目的：返回列名，以便选取特征和标签 (未考虑特征列名有重复)
@@ -141,7 +140,7 @@ def data_processing(dataFrame,isColumnName,*args,**kwargs):
     # args = 'lab',['fea0','fea1'],12
     # data, k_fea = data_processing(dataFram, isColumnName, args)
 
-   :param dataFrame: 传入之前pandas读文件的DataFram，原因在于文件较大时，重新读入文件，浪费时间。
+    :param dataFrame: 传入之前pandas读文件的DataFram，原因在于文件较大时，重新读入文件，浪费时间。
                        | 也可重新读 dataFrame = pd.readcsv(...)，需重新构建key_index。
     :param isColumnName:  文件是否有列名
     :param args: 若用户未选择，args为空，则默认最后一列为label，其它列为特征。
@@ -172,7 +171,8 @@ def data_processing(dataFrame,isColumnName,*args,**kwargs):
             x = pd.concat((dataFrame.iloc[1:,i] for i in index_x),axis=1)
             return (np.array(x), np.array(y)),x.shape[1]
         else:
-            assert len(args[0]) < 3, 'args,传入参数，应该小于3'
+            raise ValueError("The parameters in args should lower 3, not {}".format(len(args[0])))
+
 
     # 不存在列名，用户返回应是索引
     else:
@@ -192,7 +192,7 @@ def data_processing(dataFrame,isColumnName,*args,**kwargs):
             x = pd.concat((dataFrame.iloc[:, i] for i in index_x), axis=1)
             return (np.array(x), np.array(y)),x.shape[1]
         else:
-            assert len(args[0]) < 3, 'args,传入参数，应该小于3'
+            raise ValueError("The parameters in args should lower 3, not {}".format(len(args[0])))
 
 
 def create_dataset(data_x, data_y, window_size=2):
@@ -206,14 +206,12 @@ def create_dataset(data_x, data_y, window_size=2):
     dataX, dataY = [], []
 
     for i in range(len(data_x) - window_size+1):
-    # for i in range(len(data_x) - window_size):
         a = data_x[i:(i + window_size)]
         # a = a.reshape((window_size,-1))
         # print(np.shape(a))
 
         dataX.append(a)
         dataY.append(data_y[i + window_size-1])
-        # dataY.append(data_y[i + window_size])
 
     # data = np.concatenate((dataX,dataY),axis=0)
     return np.array(dataX), np.array(dataY)
@@ -221,7 +219,7 @@ def create_dataset(data_x, data_y, window_size=2):
 # data loader
 def load_data_loader(data,k_fea=1,k_train=0.7,k_val=0.2,window_size=2,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1,
                      SHUFFLE_BOOL_TRA=False,SHUFFLE_BOOL_VAL=False,SHUFFLE_BOOL_TES=False,NUM_WORKERS_TRA=0,NUM_WORKERS_VAL=0,
-                     NUM_WORKERS_TES=0,isClassfier=True,isBatchTes=False,DROP_LAST_TRA=False,DROP_LAST_VAL=False,DROP_LAST_TES=False):
+                     NUM_WORKERS_TES=0,isClassfier=True,isBatchTes=False,DROP_LAST_TRA=True,DROP_LAST_VAL=True,DROP_LAST_TES=True):
     """
     目的：装载训练/验证/测试数据
     :param data: 数据(元组 （x, y）)
@@ -238,9 +236,9 @@ def load_data_loader(data,k_fea=1,k_train=0.7,k_val=0.2,window_size=2,BATCH_SIZE
     :param NUM_WORKERS_TRA:  训练集中用于数据加载的子进程数，默认：0
     :param NUM_WORKERS_VAL: 验证集中用于数据加载的子进程数，默认：0
     :param NUM_WORKERS_TES: 测试集中用于数据加载的子进程数，默认：0
-    :param DROP_LAST_TRA: 是否丢弃训练集最后一组不够一个批量的样本，默认False
-    :param DROP_LAST_VAL: 是否丢弃验证集最后一组不够一个批量的样本，默认False
-    :param DROP_LAST_TES: 是否丢弃测试集最后一组不够一个批量的样本，默认False
+    :param DROP_LAST_TRA: 是否丢弃训练集最后一组不够一个批量的样本，默认True
+    :param DROP_LAST_VAL: 是否丢弃验证集最后一组不够一个批量的样本，默认True
+    :param DROP_LAST_TES: 是否丢弃测试集最后一组不够一个批量的样本，默认True
     :param isClassfier: 是否为分类，默认：True
     :param isBatchTes: 测试集是否使用Batch， 默认: False
     :return: isBatchTes为True 返回 训练数据装载器 train_loader, 验证数据装载器 val_loader, 测试数据装载器 test_loader
@@ -270,7 +268,6 @@ def load_data_loader(data,k_fea=1,k_train=0.7,k_val=0.2,window_size=2,BATCH_SIZE
     # print(np.shape(x_train))
     x_val, y_val = create_dataset(x_val, y_val, window_size=window_size)
     x_test, y_test = create_dataset(x_test, y_test, window_size=window_size)
-    print(np.shape(x_test))
 
 
     if isClassfier:
@@ -361,7 +358,7 @@ class RNN(nn.Module):
         self.out = nn.Linear(HIDDEN_SIZE,OUTPUT_SIZE,bias=BIAS_RNN_BOOL)
 
     # def forward(self,x,h_state):
-    def forward(self, x):
+    def forward(self, x, h):
         """
         目的：前向传播
         :param x: 输入数据维度，BATCH_FIRST 为 True，(batch, seq, input_size)
@@ -370,14 +367,12 @@ class RNN(nn.Module):
         # x (batch, seq , feature)
         # h_state (num_layers * num_directions, batch, hidden_size)
         # r_out (batch, seq , num_directions * hidden_size)
-        # print(x.size())
-        r_out, h_state = self.rnn(x)
-        # print(r_out.size())
+        r_out, h_state = self.rnn(x,h)
         # choose r_out at the last time step
         out = self.out(r_out[:,-1,:])
 
         # return out, h_state
-        return out
+        return out, h_state
 
 
 # LSTM
@@ -409,7 +404,7 @@ class LSTM(nn.Module):
 
 
     # def forward(self,x,h_state):
-    def forward(self, x):
+    def forward(self, x, h):
         """
         目的：LSTM模型前向传播
         :param x: 输入数据维度，BATCH_FIRST 为 True，(batch, seq, input_size)
@@ -418,7 +413,7 @@ class LSTM(nn.Module):
         # x (batch, seq , feature)
         # h_state (num_layers * num_directions, batch, hidden_size)
         # r_out (batch, seq , num_directions * hidden_size)
-        r_out, (h_n, h_c) = self.lstm(x)
+        r_out, h_n = self.lstm(x,h)
         # print(r_out.size())
         # print(r_out[:,-1,:].size())
         # choose r_out at the last time step
@@ -427,7 +422,7 @@ class LSTM(nn.Module):
         # print(out.size())
 
         # return out
-        return out
+        return out, h_n
 
 
 def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',WEIGHT_DECAY=0,
@@ -445,7 +440,6 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
     :param isClassfier:是否为分类，默认：True
     :return: 返回 模型 model, 优化器 optimizer, 损失函数 criterion
     """
-
     if MODEL not in ['RNN', 'LSTM']:
         raise ValueError(MODEL, "is not an available method.")
     elif MODEL == 'RNN':
@@ -458,16 +452,14 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
         model = LSTM(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE, NUM_LAYERS=1,BIAS_LSTM_BOOL=True,
                      BATCH_FIRST=True, DROPOUT_PRO=0, BIDIRECTIONAL_BOOL=False)
 
-
     if OPT not in ['Adagrad', 'SGD', 'Adam']:
         raise ValueError(OPT, " is not  available.")
     elif OPT == 'Adagrad':
-        optimizer = torch.optim.Adagrad(model.parameters(),lr = LR, weight_decay=WEIGHT_DECAY)
+        optimizer = torch.optim.Adagrad(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     elif OPT == 'SGD':
         optimizer = torch.optim.SGD(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     elif OPT == 'Adam':
         optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
-
 
     if isClassfier:
         if LOSS_NAME == 'crossentropy':
@@ -492,7 +484,7 @@ def construct_model_opt(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE,LR=1e-3,OPT = 'Adam',
 
 # train
 def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_size,num_epochs=1,CUDA_ID="0",
-                isClassfier=True,K_fea=1,USE_CUDA=False):
+                isClassfier=True,K_fea=1,model_name ='LSTM',USE_CUDA=False):
     """
     目的：训练模型
     :param model: 模型
@@ -506,6 +498,7 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_si
     :param CUDA_ID: GPU ID号，默认：0
     :param isClassfier: 是否分类，默认：True
     :param K_fea: 特征的列数，默认：1
+    :param model_name: RNN， LSTM需要设计不同传入， 默认'RNN'
     :param BATCH_SIZE_TRA: 训练集批处理量，默认：1
     :param BATCH_SIZE_VAL: 验证集批处理量，默认：1
     :param USE_CUDA:是否使用cuda，默认False
@@ -528,77 +521,158 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_si
     primary_best_acc = 0.0
     primary_lowest_loss = 100.0
 
-    for epoch in range(num_epochs):
-        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
-        print('-' * 10)
 
-        model.train()
-        running_loss = 0.0
-        running_corrects = 0
-        running_loss1 = 0.0
-        running_corrects1 = 0
-        # h_state = 0
-        for step_0, (train_x, train_y) in enumerate(train_loader):
-            # print(train_x.size())
-            train_x = train_x.view(-1,window_size,K_fea)
-            if torch.cuda.is_available() and USE_CUDA:
-                train_x = train_x.cuda()
-                train_y = train_y.cuda()
-            # print(train_x.size())
-            # print(train_y.size())
-            # output_tra, h_state= model(train_x,h_state) #  output
-            output_tra = model(train_x)  # output
-            # print(output_tra.size())
-            # h_state = h_state.data
-            loss_tra = criterion(output_tra, train_y)
-            optimizer.zero_grad()  # clear gradients for this training step
-            loss_tra.backward()  # backpropagation, compute gradients
-            optimizer.step()  # apply gradients
+    if model_name == 'RNN':
+        for epoch in range(num_epochs):
+            print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+            print('-' * 10)
 
-            _, tra_preds = torch.max(output_tra, 1)
-            running_loss += loss_tra.item() * train_x.size(0)
+            model.train()
+            running_loss = 0.0
+            running_corrects = 0
+
+            h_state = None
+            for step_0, (train_x, train_y) in enumerate(train_loader):
+                # print(train_x.size())
+                train_x = train_x.view(-1, window_size, K_fea)
+                if torch.cuda.is_available() and USE_CUDA:
+                    train_x = train_x.cuda()
+                    train_y = train_y.cuda()
+                # print(train_x.size())
+                # print(train_y.size())
+                # output_tra, h_state= model(train_x,h_state) #  output
+                output_tra, h_state = model(train_x, h_state)  # output
+                # print(output_tra.size())
+                h_state = h_state.data
+                loss_tra = criterion(output_tra, train_y)
+                optimizer.zero_grad()  # clear gradients for this training step
+                loss_tra.backward()  # backpropagation, compute gradients
+                optimizer.step()  # apply gradients
+
+                _, tra_preds = torch.max(output_tra, 1)
+                running_loss += loss_tra.item() * train_x.size(0)
+                if isClassfier:
+                    running_corrects += torch.sum(tra_preds == train_y.data)
+
+            epoch_tra_loss = running_loss / len(train_loader.dataset)
             if isClassfier:
-                running_corrects += torch.sum(tra_preds == train_y.data)
+                epoch_tra_acc = running_corrects.double() / len(train_loader.dataset)
+                print('Train Loss: {:.4f} Acc: {:.4f}'.format(epoch_tra_loss, epoch_tra_acc))
+            else:
+                print('Train Loss: {:.4f} '.format(epoch_tra_loss))
 
-        epoch_tra_loss = running_loss / len(train_loader.dataset)
-        if isClassfier:
-            epoch_tra_acc = running_corrects.double() / len(train_loader.dataset)
-            print('Train Loss: {:.4f} Acc: {:.4f}'.format(epoch_tra_loss, epoch_tra_acc))
-        else:
-            print('Train Loss: {:.4f} '.format(epoch_tra_loss))
+            running_loss1 = 0.0
+            running_corrects1 = 0
+            h_state1 = None
+            model.eval()
+            for step_1, (val_x, val_y) in enumerate(val_loader):
 
+                val_x = val_x.view(-1, window_size, K_fea)
+                if torch.cuda.is_available() and USE_CUDA:
+                    val_x = val_x.cuda()
+                    val_y = val_y.cuda()
+                # output_val = model(val_x,h_state) #  output
+                output_val, _ = model(val_x, h_state1)  # output
+                loss = criterion(output_val, val_y)  # cross entropy loss
 
-        h_state = 0
-        model.eval()
-        for step_1, (val_x, val_y) in enumerate(val_loader):
+                _, val_preds = torch.max(output_val, 1)
+                running_loss1 += loss.item() * val_x.size(0)
+                if isClassfier:
 
-            val_x = val_x.view(-1, window_size, K_fea)
-            if torch.cuda.is_available() and USE_CUDA:
-                val_x = val_x.cuda()
-                val_y = val_y.cuda()
-            # output_val = model(val_x,h_state) #  output
-            output_val = model(val_x)  # output
-            loss = criterion(output_val, val_y)  # cross entropy loss
+                    running_corrects1 += torch.sum(val_preds == val_y.data)
 
-            _, val_preds = torch.max(output_val, 1)
-            running_loss1 += loss.item() * val_x.size(0)
+            epoch_val_loss = running_loss1 / len(val_loader.dataset)
             if isClassfier:
-                running_corrects1 += torch.sum(val_preds == val_y.data)
+                epoch_val_acc = running_corrects1.double() / len(val_loader.dataset)
+                print('Val Loss: {:.4f} Acc: {:.4f}'.format(epoch_val_loss, epoch_val_acc))
+                # deep copy the model
+                if epoch_val_acc > best_acc:
+                    best_acc = epoch_val_acc
+                    best_model_wts = copy.deepcopy(model.state_dict())
+                val_acc_history.append(epoch_val_acc)
+            else:
+                if epoch_val_loss < lowest_loss:
+                    lowest_loss = epoch_val_loss
+                    best_model_wts = copy.deepcopy(model.state_dict())
+                print('Val Loss: {:.4f} '.format(epoch_val_loss))
 
-        epoch_val_loss = running_loss1 / len(val_loader.dataset)
-        if isClassfier:
-            epoch_val_acc = running_corrects1.double() / len(val_loader.dataset)
-            print('Val Loss: {:.4f} Acc: {:.4f}'.format(epoch_val_loss, epoch_val_acc))
+    else:
+        for epoch in range(num_epochs):
+            print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+            print('-' * 10)
+
+            model.train()
+            running_loss = 0.0
+            running_corrects = 0
+
+
+            h_n = None
+            for step_0, (train_x, train_y) in enumerate(train_loader):
+                # print(train_x.size())
+                train_x = train_x.view(-1, window_size, K_fea)
+                if torch.cuda.is_available() and USE_CUDA:
+                    train_x = train_x.cuda()
+                    train_y = train_y.cuda()
+
+                # print(train_x.size())
+                # print(train_y.size())
+                # output_tra, h_state= model(train_x,h_state) #  output
+                output_tra, h_n = model(train_x, h_n)  # output
+                # print(output_tra.size())
+                h_state = h_n[0].data
+                h_c = h_n[1].data
+                h_n = (h_state,h_c)
+                loss_tra = criterion(output_tra, train_y)
+                optimizer.zero_grad()  # clear gradients for this training step
+                loss_tra.backward()  # backpropagation, compute gradients
+                optimizer.step()  # apply gradients
+
+                _, tra_preds = torch.max(output_tra, 1)
+                running_loss += loss_tra.item() * train_x.size(0)
+                if isClassfier:
+                    running_corrects += torch.sum(tra_preds == train_y.data)
+
+            epoch_tra_loss = running_loss / len(train_loader.dataset)
+            if isClassfier:
+                epoch_tra_acc = running_corrects.double() / len(train_loader.dataset)
+                print('Train Loss: {:.4f} Acc: {:.4f}'.format(epoch_tra_loss, epoch_tra_acc))
+            else:
+                print('Train Loss: {:.4f} '.format(epoch_tra_loss))
+
+            running_loss1 = 0.0
+            running_corrects1 = 0
+            h_state1 = None
+            model.eval()
+            for step_1, (val_x, val_y) in enumerate(val_loader):
+
+                val_x = val_x.view(-1, window_size, K_fea)
+                # output_val = model(val_x,h_state) #  output
+                if torch.cuda.is_available() and USE_CUDA:
+                    val_x = val_x.cuda()
+                    val_y = val_y.cuda()
+                output_val, _ = model(val_x, h_state1)  # output
+                loss = criterion(output_val, val_y)  # cross entropy loss
+
+                _, val_preds = torch.max(output_val, 1)
+                running_loss1 += loss.item() * val_x.size(0)
+                if isClassfier:
+                    running_corrects1 += torch.sum(val_preds == val_y.data)
+            # print(running_corrects1)
+            epoch_val_loss = running_loss1 / len(val_loader.dataset)
             # deep copy the model
-            if  epoch_val_acc > best_acc:
-                best_acc = epoch_val_acc
-                best_model_wts = copy.deepcopy(model.state_dict())
-            val_acc_history.append(epoch_val_acc)
-        else:
-            if  epoch_val_loss < lowest_loss:
-                lowest_loss = epoch_val_loss
-                best_model_wts = copy.deepcopy(model.state_dict())
-            print('Val Loss: {:.4f} '.format(epoch_val_loss))
+            if isClassfier:
+                epoch_val_acc = running_corrects1.double() / len(val_loader.dataset)
+                print('Val Loss: {:.4f} Acc: {:.4f}'.format(epoch_val_loss, epoch_val_acc))
+                if epoch_val_acc > best_acc:
+                    best_acc = epoch_val_acc
+                    best_model_wts = copy.deepcopy(model.state_dict())
+                val_acc_history.append(epoch_val_acc)
+            else:
+                if epoch_val_loss < lowest_loss:
+                    lowest_loss = epoch_val_loss
+                    best_model_wts = copy.deepcopy(model.state_dict())
+                print('Val Loss: {:.4f} '.format(epoch_val_loss))
+
 
 
     time_elapsed = time.time() - since
@@ -620,16 +694,17 @@ def train_model(model,train_loader,val_loader,criterion,optimizer,PATH,window_si
 
 
 # test
-def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH,window_size=2, K_fea=1,k_train=0.7,k_val=0.2, num_epochs=1, LR=1e-3,LOSS_NAME = 'crossentropy',
+def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1,window_size=2, K_fea=1,k_train=0.7,k_val=0.2, num_epochs=1, LR=1e-3,LOSS_NAME = 'crossentropy',
          CUDA_ID="0", isClassfier=True, MODEL='RNN',isBatchTes=False,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1,USE_CUDA=False):
     """
-    目的：整体流程: 数据装载 -> 模型构建 -> 模型训练(保存) ->模型测试
+    目的：整体流程: 数据装载 -> 模型构建 -> 模型训练(保存)
     若是分类，OUTPUT_SIZE应该与标签Label类别数一致；
     若是回归，OUTPUT_SIZE应该为1
     :param data: 数据
     :param HIDDEN_SIZE: 隐藏层神经元的个数
     :param OUTPUT_SIZE: 输出神经元的个数
     :param PATH:模型存储路径
+    :param Seq: 时间序列数，默认：1
     :param window_size: 窗口大小
     :param K_fea: 特征的列数，默认：1
     :param k_train: 训练集所占比例，默认：0.7
@@ -651,59 +726,14 @@ def Flow(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH,window_size=2, K_fea=1,k_train=0.7,
               SHUFFLE_BOOL_VAL=False, SHUFFLE_BOOL_TES=True,NUM_WORKERS_TRA=0, NUM_WORKERS_VAL=0, NUM_WORKERS_TES=0,isClassfier=isClassfier,isBatchTes=isBatchTes)
     model, optimizer, criterion = construct_model_opt(K_fea, HIDDEN_SIZE, OUTPUT_SIZE, LR=LR, OPT='Adam', WEIGHT_DECAY=0,
                         LOSS_NAME=LOSS_NAME, MODEL=MODEL,isClassfier=isClassfier)
-    train_model(model, train_loader, val_loader, criterion, optimizer,PATH,window_size,num_epochs,CUDA_ID,isClassfier,K_fea=K_fea,USE_CUDA=USE_CUDA)
-    return test_loader
-    # """For test"""
-    # if isBatchTes:
-    #     data_y, pred_y = load_model_test(PATH,test_loader,isClassfier=isClassfier,isBatchTes=isBatchTes,Seq=Seq,K_fea=K_fea,BATCH_SIZE_TES=BATCH_SIZE_TES)
-    # else:
-    #     # print(type(test_loader))
-    #     data_y, pred_y = load_model_test(PATH, test_loader, isClassfier=isClassfier, isBatchTes=isBatchTes,Seq=Seq,K_fea=K_fea)
-
-    # return data_y, pred_y
-
-
-
-def Flow_load(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1,window_size=2, K_fea=1,k_train=0.7,k_val=0.2, num_epochs=1, LR=1e-3,LOSS_NAME = 'crossentropy',
-         CUDA_ID="0", isClassfier=True, MODEL='RNN',isBatchTes=False,BATCH_SIZE_TRA=1,BATCH_SIZE_VAL=1,BATCH_SIZE_TES=1,USE_CUDA=False):
-    """
-    目的：整体流程: 数据装载 -> 模型构建 -> 模型训练(保存) ->模型测试
-    若是分类，OUTPUT_SIZE应该与标签Label类别数一致；
-    若是回归，OUTPUT_SIZE应该为1
-    :param data: 数据
-    :param HIDDEN_SIZE: 隐藏层神经元的个数
-    :param OUTPUT_SIZE: 输出神经元的个数
-    :param PATH:模型存储路径
-    :param Seq: 时间序列数，默认：1 （测试时）
-    :param window_size: 窗口大小
-    :param K_fea: 特征的列数，默认：1
-    :param k_train: 训练集所占比例，默认：0.7
-    :param k_val: 验证集所占比例，默认：0.2
-    :param num_epochs:训练迭代次数，默认：1
-    :param LR:学习率，默认：1e-3
-    :param LOSS_NAME:损失函数名称，默认：'crossentropy'
-    :param CUDA_ID:GPU ID号，默认：0
-    :param isClassfier:是否分类，默认：True
-    :param MODEL:模型, 默认:'RNN'
-    :param isBatchTes: 测试集是否使用Batch， 默认: False
-    :param BATCH_SIZE_TRA: 训练集批处理量，默认：1
-    :param BATCH_SIZE_VAL: 验证集批处理量，默认：1
-    :param BATCH_SIZE_TES: 测试集批处理量，默认：1
-    :param USE_CUDA:是否使用cuda，默认False
-    :return:无返回值，train_model内保存最优模型
-    """
-    train_loader, val_loader, test_loader = load_data_loader(data, K_fea, window_size=window_size,k_train=k_train,k_val=k_val, BATCH_SIZE_TRA=BATCH_SIZE_TRA, BATCH_SIZE_VAL=BATCH_SIZE_VAL,BATCH_SIZE_TES=BATCH_SIZE_TES, SHUFFLE_BOOL_TRA=False,
-              SHUFFLE_BOOL_VAL=False, SHUFFLE_BOOL_TES=True,NUM_WORKERS_TRA=0, NUM_WORKERS_VAL=0, NUM_WORKERS_TES=0,isClassfier=isClassfier,isBatchTes=isBatchTes)
-    model, optimizer, criterion = construct_model_opt(K_fea, HIDDEN_SIZE, OUTPUT_SIZE, LR=LR, OPT='Adam', WEIGHT_DECAY=0,
-                        LOSS_NAME=LOSS_NAME, MODEL=MODEL,isClassfier=isClassfier)
-    train_model(model, train_loader, val_loader, criterion, optimizer,PATH,window_size,num_epochs,CUDA_ID,isClassfier,K_fea=K_fea,USE_CUDA=USE_CUDA,)
+    train_model(model, train_loader, val_loader, criterion, optimizer,PATH,window_size,num_epochs,CUDA_ID,isClassfier,K_fea=K_fea,model_name=MODEL,USE_CUDA=USE_CUDA)
 
     """For test"""
     if isBatchTes:
-        data_y, pred_y = load_model_test(PATH,test_loader,isClassfier=isClassfier,isBatchTes=isBatchTes,Seq=window_size,K_fea=K_fea,BATCH_SIZE_TES=BATCH_SIZE_TES,CUDA_ID=CUDA_ID,USE_CUDA=USE_CUDA)
+        data_y, pred_y = load_model_test(PATH,test_loader,isClassfier=isClassfier,isBatchTes=isBatchTes,Seq=window_size,K_fea=K_fea,BATCH_SIZE_TES=BATCH_SIZE_TES,USE_CUDA=USE_CUDA)
     else:
         # print(type(test_loader))
-        data_y, pred_y = load_model_test(PATH, test_loader, isClassfier=isClassfier, isBatchTes=isBatchTes,Seq=window_size,K_fea=K_fea,CUDA_ID=CUDA_ID,USE_CUDA=USE_CUDA)
+        data_y, pred_y = load_model_test(PATH, test_loader, isClassfier=isClassfier, isBatchTes=isBatchTes,Seq=window_size,K_fea=K_fea,USE_CUDA=USE_CUDA)
 
     return data_y, pred_y
 
@@ -711,7 +741,7 @@ def Flow_load(data,HIDDEN_SIZE, OUTPUT_SIZE, PATH, Seq=1,window_size=2, K_fea=1,
 # save whole model
 def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1,CUDA_ID="0",BATCH_SIZE_TES=1,USE_CUDA=False):
     """
-    目的：加载训练好的模型，进行测试/预测（测试集）
+    目的：加载训练好的模型，进行测试/预测
     :param PATH:保存的模型路径
     :param data:测试数据
     :param isClassfier:是否为分类，默认True
@@ -723,7 +753,6 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1,CU
     :param USE_CUDA:是否使用cuda，默认False
     :return:测试数据的真实值 data_y 测试数据的预测结果 pred_y
     """
-
     device = torch.device(("cuda:"+CUDA_ID) if torch.cuda.is_available() else "cpu")
     # Model class must be defined somewhere
     model = torch.load(PATH)
@@ -736,11 +765,12 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1,CU
         else:
             data_y = torch.Tensor([])
         # data_x = torch.Tensor([])
+        h = None
         for step_0,(test_x, test_y) in enumerate(data):
             test_x = test_x.view(-1,Seq,K_fea)
             if torch.cuda.is_available() and USE_CUDA:
                 test_x = test_x.cuda()
-            output = model(test_x)
+            output, _ = model(test_x,h)
             # print(output.size())
             pred_y = torch.cat((pred_y,output),0)
             data_y = torch.cat((data_y, test_y), 0)
@@ -750,12 +780,13 @@ def load_model_test(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea=1,CU
         # 1. simple, not many samples
         data_x = torch.Tensor(np.array(data[0]))
         data_y = data[1]
-        print(data_x.size())
-        # data_x = data_x.view(-1,Seq,K_fea)
+
+        data_x = data_x.view(-1,Seq,K_fea)
         # print(data_x.size())
         if torch.cuda.is_available() and USE_CUDA :
             data_x = data_x.cuda()
-        pred_y = model(data_x)
+        h = None
+        pred_y, _ = model(data_x, h)
 
     if isClassfier:
         _, pred_y = torch.max(pred_y, 1)
@@ -842,12 +873,13 @@ def load_model_test_data(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea
         # else:
         #     data_y = torch.Tensor([])
         # data_x = torch.Tensor([])
+        h = None
         for step_0, (test_x) in enumerate(data):
             test_x = torch.Tensor(test_x[0])
             test_x = test_x.view(-1,Seq,K_fea)
             if torch.cuda.is_available() and USE_CUDA:
                 test_x = test_x.cuda()
-            output = model(test_x)
+            output, _  = model(test_x,h)
             # print(output.size())
             pred_y = torch.cat((pred_y,output),0)
             # data_x = torch.cat((data_x, test_x), 0)
@@ -861,7 +893,8 @@ def load_model_test_data(PATH,data,isClassfier=True,isBatchTes=False,Seq=1,K_fea
         # print(data_x.size())
         if torch.cuda.is_available() and USE_CUDA :
             data_x = data_x.cuda()
-        pred_y = model(data_x)
+        h = None
+        pred_y, _ = model(data_x, h)
 
     if isClassfier:
         _, pred_y = torch.max(pred_y, 1)
@@ -923,17 +956,10 @@ if __name__ =='__main__':
     # args = 'lab',['fea0','fea1'],12
     # data, k_fea = data_processing(dataFram, isColumnName, args)
 
-    data_y, pred_y = Flow_load(
-                            data=data, Seq=1, window_size=2, K_fea=k_fea, HIDDEN_SIZE=20, OUTPUT_SIZE=2, PATH=path,
+    data_y, pred_y = Flow(
+                            data=data, Seq=1, window_size=1, K_fea=k_fea,k_train=0.5,k_val=0.3, HIDDEN_SIZE=20, OUTPUT_SIZE=2, PATH=path,
                             num_epochs=20, LR=0.01,isClassfier=True, MODEL='RNN', BATCH_SIZE_TRA=4, BATCH_SIZE_VAL=1,
-                            BATCH_SIZE_TES=1,USE_CUDA=False,isBatchTes=False)
-    dataFram = pd.read_csv('iris1.data', header=0, )
-
-    dataFram = dataFram.iloc[:,:4]
-    # print(dataFram)
-    pred_y = load_model_test_data(path,dataFram,isClassfier=True,isBatchTes=True,Seq=1,K_fea=k_fea,CUDA_ID="0",BATCH_SIZE_TES=1,USE_CUDA=False)
-    print(pred_y)
-    print(len(pred_y))
+                            BATCH_SIZE_TES=1,isBatchTes=False,USE_CUDA=False)
 
     """       ************* Test  Regression *************        """
     """ case1 """

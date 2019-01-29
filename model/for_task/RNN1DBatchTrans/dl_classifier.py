@@ -2,10 +2,10 @@
 """
 Created on Fri Jan   2019
 
-@author: Ran
+@author: Yangkun Cao
 """
 
-import RNN1DBatchNoTrans as RNNnoTRA
+import RNN1DBatchTrans as RNNTRA
 import numpy as np
 import pandas as pd
 
@@ -323,7 +323,7 @@ class DLClassification():
                 HIDDEN_SIZE, OUTPUT_SIZE, num_epochs, LR, func_name, \
                 BATCH_SIZE_TRA, BATCH_SIZE_VAL, BATCH_SIZE_TES,CUDA_ID, BATCH_SIZE_TES = self.train_parm(model_param)
 
-                data_y, pred_y = RNNnoTRA.Flow_load(data=data, window_size=window_size, K_fea=k_fea, HIDDEN_SIZE=HIDDEN_SIZE,
+                data_y, pred_y = RNNTRA.Flow(data=data, window_size=window_size, K_fea=k_fea, HIDDEN_SIZE=HIDDEN_SIZE,
                               OUTPUT_SIZE=OUTPUT_SIZE, PATH=model_path,num_epochs=num_epochs, LR=LR,isClassfier=isClassfier,
                               MODEL=func_name, BATCH_SIZE_TRA=BATCH_SIZE_TRA, BATCH_SIZE_VAL=BATCH_SIZE_VAL,
                             BATCH_SIZE_TES=BATCH_SIZE_TES,USE_CUDA=USE_CUDA,isBatchTes=isBatchTes,CUDA_ID=CUDA_ID)
@@ -335,7 +335,7 @@ class DLClassification():
                 CUDA_ID, BATCH_SIZE_TES = self.test_parm(model_param)
                 data = data[0]  # get feature
                 # print(data)
-                pred_y = RNNnoTRA.load_model_test_data(model_path,data,isClassfier=isClassfier,isBatchTes=isBatchTes,
+                pred_y = RNNTRA.load_model_test_data(model_path,data,isClassfier=isClassfier,isBatchTes=isBatchTes,
                                               Seq=window_size,K_fea=k_fea,CUDA_ID=CUDA_ID,BATCH_SIZE_TES=BATCH_SIZE_TES,USE_CUDA=USE_CUDA)
                 print(pred_y)
             except AttributeError:
@@ -347,7 +347,7 @@ if __name__ == '__main__':
     path_column_T = 'iris1.data'
     # test data_processing
     # isColumnName = True 则features_col， label_col 里应该是字符
-    # 'model_path': 'model_params.pkl'
+
     config_info1T = {'BATCH_SIZE_TES': '1','USE_CUDA': '0','isBatchTes': 'False','window_size': '1','HIDDEN_SIZE': '20',
                    'model_path': 'model_params.pkl','isColumnName':'True',
                    'func_name': 'RNN', 'is_train': 'True',
@@ -387,15 +387,16 @@ if __name__ == '__main__':
     config_info4F = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
                      'HIDDEN_SIZE': '20',
                      'model_path': 'model_params.pkl', 'isColumnName': 'False',
-                     'func_name': 'RNN', 'is_train': 'True',
+                     'func_name': 'LSTM', 'is_train': 'True',
                      'features_col': [1,2], 'tol': '1e-06', 'label_col': [4], }
 
     """case1"""
-    # DLClassification().run(path_column_T,config_info=config_info2T)
+    # DLClassification().run(path_column_T,config_info=config_info1T)
     """case2"""
     # DLClassification().run(path_column_F, config_info=config_info4F)
 
-    """case3 is_train = False"""
+    """case3 is_train = False 模型预测"""
+    # 先产生对应模型， 才能加载模型预测
     config_info4F_3 = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
                      'HIDDEN_SIZE': '20',
                      'model_path': 'model_params.pkl', 'isColumnName': 'False',
@@ -405,9 +406,14 @@ if __name__ == '__main__':
     config_info4T_3 = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
                      'HIDDEN_SIZE': '20',
                      'model_path': 'model_params.pkl', 'isColumnName': 'True',
-                     'func_name': 'RNN', 'is_train': 'False',
-                     'features_col': ['fea1', 'fea2'], 'tol': '1e-06', 'label_col': [], }
-    DLClassification().run(path_column_T, config_info=config_info4T_3)
+                     'func_name': 'RNN', 'is_train': 'True',
+                     'features_col': ['fea1', 'fea2'], 'tol': '1e-06', 'label_col': ['lab'], }
+    config_info5T_3 = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
+                       'HIDDEN_SIZE': '20',
+                       'model_path': 'model_params.pkl', 'isColumnName': 'True',
+                       'func_name': 'RNN', 'is_train': 'False',
+                       'features_col': ['fea1', 'fea2'], 'tol': '1e-06', 'label_col': [], }
+    DLClassification().run(path_column_T, config_info=config_info5T_3)
 
     # from get_offline_app import GetSparkContextSession
     # data_path = 'hdfs://phm1:8020/user/root/test/kang_clasification.csv'

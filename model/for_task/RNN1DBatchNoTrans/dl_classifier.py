@@ -2,7 +2,7 @@
 """
 Created on Fri Jan   2019
 
-@author: Ran
+@author: Yangkun Cao
 """
 
 import RNN1DBatchNoTrans as RNNnoTRA
@@ -347,7 +347,7 @@ if __name__ == '__main__':
     path_column_T = 'iris1.data'
     # test data_processing
     # isColumnName = True 则features_col， label_col 里应该是字符
-    # 'model_path': 'model_params.pkl'
+
     config_info1T = {'BATCH_SIZE_TES': '1','USE_CUDA': '0','isBatchTes': 'False','window_size': '1','HIDDEN_SIZE': '20',
                    'model_path': 'model_params.pkl','isColumnName':'True',
                    'func_name': 'RNN', 'is_train': 'True',
@@ -387,15 +387,15 @@ if __name__ == '__main__':
     config_info4F = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
                      'HIDDEN_SIZE': '20',
                      'model_path': 'model_params.pkl', 'isColumnName': 'False',
-                     'func_name': 'RNN', 'is_train': 'True',
+                     'func_name': 'LSTM', 'is_train': 'True',
                      'features_col': [1,2], 'tol': '1e-06', 'label_col': [4], }
 
     """case1"""
     # DLClassification().run(path_column_T,config_info=config_info2T)
     """case2"""
-    # DLClassification().run(path_column_F, config_info=config_info4F)
+    DLClassification().run(path_column_F, config_info=config_info4F)
 
-    """case3 is_train = False"""
+    """case3 is_train = False 模型预测"""
     config_info4F_3 = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
                      'HIDDEN_SIZE': '20',
                      'model_path': 'model_params.pkl', 'isColumnName': 'False',
@@ -407,7 +407,7 @@ if __name__ == '__main__':
                      'model_path': 'model_params.pkl', 'isColumnName': 'True',
                      'func_name': 'RNN', 'is_train': 'False',
                      'features_col': ['fea1', 'fea2'], 'tol': '1e-06', 'label_col': [], }
-    DLClassification().run(path_column_T, config_info=config_info4T_3)
+    # DLClassification().run(path_column_T, config_info=config_info4T_3)
 
     # from get_offline_app import GetSparkContextSession
     # data_path = 'hdfs://phm1:8020/user/root/test/kang_clasification.csv'

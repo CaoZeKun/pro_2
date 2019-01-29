@@ -2,7 +2,7 @@
 """
 Created on Fri Jan   2019
 
-@author: Ran
+@author: Yangkun Cao
 """
 
 import RNN1DBatchNoTrans as RNNnoTRA
@@ -10,10 +10,10 @@ import numpy as np
 import pandas as pd
 
 
-class DLClassification():
+class DLRegression():
     '''
      RNN1DBatchNoTrans 时序性分类模型(不同批batch之间不互传)
-     分类，输出神经元个数 >=2
+     回归，输出神经元个数 =1
     '''
 
     name = 'DLClassification'
@@ -189,7 +189,7 @@ class DLClassification():
         else:
             isBatchTes = False
 
-        # 此文件是分类，可以不传 这个key，默认True
+        # 此文件是回归，可以不传 这个key，默认False
         if 'isClassfier' in model_param.keys():
             isClassfier = model_param['isClassfier']
             if isClassfier in ['True', '1']:
@@ -198,7 +198,7 @@ class DLClassification():
                 isClassfier = False
             # model_param.pop('isClassfier')
         else:
-            isClassfier = True
+            isClassfier = False
 
         return USE_CUDA, isBatchTes, isClassfier, window_size
 
@@ -210,12 +210,12 @@ class DLClassification():
         else:
             HIDDEN_SIZE = 20
 
-        # OUTPUT_SIZE should >= 2
+        # OUTPUT_SIZE should = 1
         if 'OUTPUT_SIZE' in model_param.keys():
             OUTPUT_SIZE = int(model_param['OUTPUT_SIZE'])
             # model_param.pop('OUTPUT_SIZE')
         else:
-            OUTPUT_SIZE = 2
+            OUTPUT_SIZE = 1
 
         if 'num_epochs' in model_param.keys():
             num_epochs = int(model_param['num_epochs'])
@@ -347,67 +347,67 @@ if __name__ == '__main__':
     path_column_T = 'iris1.data'
     # test data_processing
     # isColumnName = True 则features_col， label_col 里应该是字符
-    # 'model_path': 'model_params.pkl'
+    # 'model_path': 'model_params_regression.pkl'
     config_info1T = {'BATCH_SIZE_TES': '1','USE_CUDA': '0','isBatchTes': 'False','window_size': '1','HIDDEN_SIZE': '20',
-                   'model_path': 'model_params.pkl','isColumnName':'True',
+                   'model_path': 'model_params_regression.pkl','isColumnName':'True',
                    'func_name': 'RNN', 'is_train': 'True',
                    'features_col': [], 'tol': '1e-06', 'label_col': [],}
     config_info2T = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
                     'HIDDEN_SIZE': '20',
-                    'model_path': 'model_params.pkl', 'isColumnName': 'True',
+                    'model_path': 'model_params_regression.pkl', 'isColumnName': 'True',
                     'func_name': 'RNN', 'is_train': 'True',
                     'features_col': ['fea1'], 'tol': '1e-06', 'label_col': [], }
     config_info3T = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
                     'HIDDEN_SIZE': '20',
-                    'model_path': 'model_params.pkl', 'isColumnName': 'True',
+                    'model_path': 'model_params_regression.pkl', 'isColumnName': 'True',
                     'func_name': 'RNN', 'is_train': 'True',
                     'features_col': ['fea1'], 'tol': '1e-06', 'label_col': ['lab'], }
     config_info4T = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
                      'HIDDEN_SIZE': '20',
-                     'model_path': 'model_params.pkl', 'isColumnName': 'True',
+                     'model_path': 'model_params_regression.pkl', 'isColumnName': 'True',
                      'func_name': 'RNN', 'is_train': 'True',
                      'features_col': ['fea1','fea2'], 'tol': '1e-06', 'label_col': ['lab'], }
     # isColumnName = False 则features_col， label_col 里应该是索引
     path_column_F = 'iris.data'
     config_info1F = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
                     'HIDDEN_SIZE': '20',
-                    'model_path': 'model_params.pkl', 'isColumnName': 'False',
+                    'model_path': 'model_params_regression.pkl', 'isColumnName': 'False',
                     'func_name': 'RNN', 'is_train': 'True',
                     'features_col': [], 'tol': '1e-06', 'label_col': [4], }
     config_info2F = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
                      'HIDDEN_SIZE': '20',
-                     'model_path': 'model_params.pkl', 'isColumnName': 'False',
+                     'model_path': 'model_params_regression.pkl', 'isColumnName': 'False',
                      'func_name': 'RNN', 'is_train': 'True',
                      'features_col': [], 'tol': '1e-06', 'label_col': [], }
     config_info3F = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
                      'HIDDEN_SIZE': '20',
-                     'model_path': 'model_params.pkl', 'isColumnName': 'False',
+                     'model_path': 'model_params_regression.pkl', 'isColumnName': 'False',
                      'func_name': 'RNN', 'is_train': 'True',
                      'features_col': [1], 'tol': '1e-06', 'label_col': [4], }
     config_info4F = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
                      'HIDDEN_SIZE': '20',
-                     'model_path': 'model_params.pkl', 'isColumnName': 'False',
+                     'model_path': 'model_params_regression.pkl', 'isColumnName': 'False',
                      'func_name': 'RNN', 'is_train': 'True',
                      'features_col': [1,2], 'tol': '1e-06', 'label_col': [4], }
 
     """case1"""
-    # DLClassification().run(path_column_T,config_info=config_info2T)
+    # DLRegression().run(path_column_T,config_info=config_info2T)
     """case2"""
-    # DLClassification().run(path_column_F, config_info=config_info4F)
+    # DLRegression().run(path_column_F, config_info=config_info4F)
 
     """case3 is_train = False"""
     config_info4F_3 = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
                      'HIDDEN_SIZE': '20',
-                     'model_path': 'model_params.pkl', 'isColumnName': 'False',
+                     'model_path': 'model_params_regression.pkl', 'isColumnName': 'False',
                      'func_name': 'RNN', 'is_train': 'False',
                      'features_col': [1, 2], 'tol': '1e-06', 'label_col': [4], }
-    # DLClassification().run(path_column_F, config_info=config_info4F_3)
+    # DLRegression().run(path_column_F, config_info=config_info4F_3)
     config_info4T_3 = {'BATCH_SIZE_TES': '1', 'USE_CUDA': '0', 'isBatchTes': 'False', 'window_size': '1',
-                     'HIDDEN_SIZE': '20',
-                     'model_path': 'model_params.pkl', 'isColumnName': 'True',
+                     'HIDDEN_SIZE': '20','num_epochs':'100','LR':'0.1',
+                     'model_path': 'model_params_regression.pkl', 'isColumnName': 'True','isClassfier':'False',
                      'func_name': 'RNN', 'is_train': 'False',
-                     'features_col': ['fea1', 'fea2'], 'tol': '1e-06', 'label_col': [], }
-    DLClassification().run(path_column_T, config_info=config_info4T_3)
+                     'features_col': ['fea1', 'fea2'], 'tol': '1e-06', 'label_col': ['lab'], }
+    DLRegression().run(path_column_T, config_info=config_info4T_3)
 
     # from get_offline_app import GetSparkContextSession
     # data_path = 'hdfs://phm1:8020/user/root/test/kang_clasification.csv'
